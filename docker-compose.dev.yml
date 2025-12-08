@@ -1,0 +1,13 @@
+version: '3.9'
+
+services:
+  app:
+    command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm dev"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      NEXT_TELEMETRY_DISABLED: 1
+      NODE_ENV: development
+
+
