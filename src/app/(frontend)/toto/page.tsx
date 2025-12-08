@@ -5,7 +5,7 @@ import React from 'react'
 import { fileURLToPath } from 'url'
 
 import config from '@/payload.config'
-import './styles.css'
+import '.././styles.css'
 
 export default async function HomePage() {
   const headers = await getHeaders()
@@ -49,9 +49,9 @@ export default async function HomePage() {
         </div>
       </div>
       <div className="footer">
-        <p>CECI Update this page by editing</p>
+        <p>Update this page by editing</p>
         <a className="codeLink" href={fileURL}>
-          <code>app/(frontend)/page.tsx</code>
+          <code>app/(frontend)/toto/page.tsx</code>
         </a>
       </div>
     </div>
