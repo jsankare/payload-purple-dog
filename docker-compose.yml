@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   payload:
     image: node:18-alpine
@@ -16,12 +14,14 @@ services:
       - .env
 
   postgres:
-   restart: always
-   image: postgres:latest
-   volumes:
-     - pgdata:/var/lib/postgresql/data
-   ports:
-     - "5432:5432"
+    restart: always
+    image: postgres:latest
+    volumes:
+      - pgdata:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env
 
 volumes:
   data:
