@@ -61,6 +61,9 @@ export const Users: CollectionConfig = {
       },
       generateEmailSubject: () => 'Validez votre compte',
     },
+    tokenExpiration: 7200,
+    maxLoginAttempts: 5,
+    lockTime: 600000,
   },
   fields: [
     // Rôle de l'utilisateur
