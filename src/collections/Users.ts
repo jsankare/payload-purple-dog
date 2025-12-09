@@ -38,28 +38,28 @@ export const Users: CollectionConfig = {
     delete: () => false,
   },
   auth: {
-    verify: {
-      generateEmailHTML: ({ token, user }) => {
-        // URL de validation du compte
-        const url = `${process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000'}/verify?token=${token}`
+    // verify: {
+    //   generateEmailHTML: ({ token, user }) => {
+    //     // URL de validation du compte
+    //     const url = `${process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000'}/verify?token=${token}`
 
-        return `
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <meta charset="utf-8">
-            </head>
-            <body>
-              <h1>Bienvenue ${user.firstName || 'sur notre plateforme'} !</h1>
-              <p>Merci de vous être inscrit. Veuillez cliquer sur le lien ci-dessous pour valider votre compte :</p>
-              <p><a href="${url}">Valider mon compte</a></p>
-              <p>Si vous n'êtes pas à l'origine de cette inscription, veuillez ignorer cet email.</p>
-            </body>
-          </html>
-        `
-      },
-      generateEmailSubject: () => 'Validez votre compte',
-    },
+    //     return `
+    //       <!DOCTYPE html>
+    //       <html>
+    //         <head>
+    //           <meta charset="utf-8">
+    //         </head>
+    //         <body>
+    //           <h1>Bienvenue ${user.firstName || 'sur notre plateforme'} !</h1>
+    //           <p>Merci de vous être inscrit. Veuillez cliquer sur le lien ci-dessous pour valider votre compte :</p>
+    //           <p><a href="${url}">Valider mon compte</a></p>
+    //           <p>Si vous n'êtes pas à l'origine de cette inscription, veuillez ignorer cet email.</p>
+    //         </body>
+    //       </html>
+    //     `
+    //   },
+    //   generateEmailSubject: () => 'Validez votre compte',
+    // },
     tokenExpiration: 7200,
     maxLoginAttempts: 5,
     lockTime: 600000,

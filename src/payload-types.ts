@@ -72,6 +72,7 @@ export interface Config {
     plans: Plan;
     subscriptions: Subscription;
     posts: Post;
+    objects: Object;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -84,6 +85,7 @@ export interface Config {
     plans: PlansSelect<false> | PlansSelect<true>;
     subscriptions: SubscriptionsSelect<false> | SubscriptionsSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
+    objects: ObjectsSelect<false> | ObjectsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -168,8 +170,6 @@ export interface User {
   resetPasswordExpiration?: string | null;
   salt?: string | null;
   hash?: string | null;
-  _verified?: boolean | null;
-  _verificationToken?: string | null;
   loginAttempts?: number | null;
   lockUntil?: string | null;
   sessions?:
@@ -295,6 +295,41 @@ export interface Post {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "objects".
+ */
+export interface Object {
+  id: number;
+  name: string;
+  category:
+    | 'jewelry-watches'
+    | 'antique-furniture'
+    | 'art-paintings'
+    | 'collectibles'
+    | 'fine-wines'
+    | 'instruments'
+    | 'rare-books'
+    | 'classic-cars'
+    | 'luxury-fashion'
+    | 'clocks'
+    | 'vintage-photo'
+    | 'tableware'
+    | 'decorative-art'
+    | 'vintage-vehicles';
+  dimensions: {
+    height?: number | null;
+    width?: number | null;
+    depth?: number | null;
+  };
+  weight: number;
+  description: string;
+  documents: {
+    documents: number | Media;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -336,6 +371,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'posts';
         value: number | Post;
+      } | null)
+    | ({
+        relationTo: 'objects';
+        value: number | Object;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -425,8 +464,6 @@ export interface UsersSelect<T extends boolean = true> {
   resetPasswordExpiration?: T;
   salt?: T;
   hash?: T;
-  _verified?: T;
-  _verificationToken?: T;
   loginAttempts?: T;
   lockUntil?: T;
   sessions?:
@@ -502,6 +539,30 @@ export interface SubscriptionsSelect<T extends boolean = true> {
  */
 export interface PostsSelect<T extends boolean = true> {
   title?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "objects_select".
+ */
+export interface ObjectsSelect<T extends boolean = true> {
+  name?: T;
+  category?: T;
+  dimensions?:
+    | T
+    | {
+        height?: T;
+        width?: T;
+        depth?: T;
+      };
+  weight?: T;
+  description?: T;
+  documents?:
+    | T
+    | {
+        documents?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }

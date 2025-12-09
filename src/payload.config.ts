@@ -13,6 +13,7 @@ import { Media } from './collections/Media'
 import { Posts } from "@/collections/Page";
 import { Plans } from './collections/Plans'
 import { Subscriptions } from './collections/Subscriptions'
+import { Objects } from './collections/Objects'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -23,8 +24,9 @@ export default buildConfig({
     importMap: {
       baseDir: path.resolve(dirname),
     },
+    dateFormat: 'd MMMM yyyy, HH:mm',
   },
-  collections: [Users, Media, Plans, Subscriptions, Posts],
+  collections: [Users, Media, Plans, Subscriptions, Posts, Objects],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
