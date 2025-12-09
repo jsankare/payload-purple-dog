@@ -4,9 +4,12 @@ import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 import sharp from 'sharp'
+import { en } from 'payload/i18n/en'
+import { fr } from 'payload/i18n/fr'
 
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
+import { Posts } from "@/collections/Page";
 import { Plans } from './collections/Plans'
 import { Subscriptions } from './collections/Subscriptions'
 
@@ -20,7 +23,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Plans, Subscriptions],
+  collections: [Users, Media, Plans, Subscriptions, Posts],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
@@ -33,4 +36,8 @@ export default buildConfig({
   }),
   sharp,
   plugins: [],
+  i18n: {
+    fallbackLanguage: 'fr',
+    supportedLanguages: { en, fr },
+  }
 })

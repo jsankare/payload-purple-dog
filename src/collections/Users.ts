@@ -42,7 +42,7 @@ export const Users: CollectionConfig = {
       generateEmailHTML: ({ token, user }) => {
         // URL de validation du compte
         const url = `${process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000'}/verify?token=${token}`
-        
+
         return `
           <!DOCTYPE html>
           <html>
@@ -480,7 +480,7 @@ export const Users: CollectionConfig = {
 
               if (particulierPlan.docs.length > 0) {
                 const plan = particulierPlan.docs[0]
-                
+
                 // Créer l'abonnement gratuit permanent
                 const now = new Date()
                 const periodEnd = new Date(now)
@@ -522,7 +522,7 @@ export const Users: CollectionConfig = {
             }
           }
         }
-        
+
         return doc
       },
     ],
