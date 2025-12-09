@@ -61,6 +61,7 @@ export const Users: CollectionConfig = {
       },
       generateEmailSubject: () => 'Validez votre compte',
     },
+  },
   fields: [
     // Rôle de l'utilisateur
     {
