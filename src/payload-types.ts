@@ -154,6 +154,27 @@ export interface User {
     linkedin?: string | null;
     twitter?: string | null;
   };
+  /**
+   * Requis pour les professionnels (achats/enchères) et les particuliers (ventes)
+   */
+  bankDetails?: {
+    /**
+     * Format: FR76 1234 5678 9012 3456 7890 123
+     */
+    iban?: string | null;
+    /**
+     * Code BIC/SWIFT de la banque (8 ou 11 caractères)
+     */
+    bic?: string | null;
+    /**
+     * Nom du titulaire du compte bancaire
+     */
+    accountHolderName?: string | null;
+    /**
+     * Vérifié par l'administrateur
+     */
+    bankDetailsVerified?: boolean | null;
+  };
   acceptedTerms?: boolean | null;
   acceptedMandate?: boolean | null;
   acceptedGDPR?: boolean | null;
@@ -439,6 +460,14 @@ export interface UsersSelect<T extends boolean = true> {
         instagram?: T;
         linkedin?: T;
         twitter?: T;
+      };
+  bankDetails?:
+    | T
+    | {
+        iban?: T;
+        bic?: T;
+        accountHolderName?: T;
+        bankDetailsVerified?: T;
       };
   acceptedTerms?: T;
   acceptedMandate?: T;
