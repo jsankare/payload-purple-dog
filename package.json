@@ -21,9 +21,11 @@
     "docker:prod": "pnpm run docker:clean && docker compose up -d --build"
   },
   "dependencies": {
+    "@payloadcms/db-postgres": "3.67.0",
     "@payloadcms/next": "3.67.0",
     "@payloadcms/richtext-lexical": "3.67.0",
     "@payloadcms/ui": "3.67.0",
+    "@stripe/stripe-js": "^8.5.3",
     "cross-env": "^7.0.3",
     "dotenv": "16.4.7",
     "graphql": "^16.8.1",
@@ -32,7 +34,9 @@
     "react": "19.2.1",
     "react-dom": "19.2.1",
     "sharp": "0.34.2",
-    "@payloadcms/db-postgres": "3.67.0"
+    "stripe": "^20.0.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-react": "^5.30.3"
   },
   "devDependencies": {
     "@playwright/test": "1.56.1",
@@ -40,6 +44,8 @@
     "@types/node": "^22.5.4",
     "@types/react": "19.2.1",
     "@types/react-dom": "19.2.1",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-react": "^5.18.0",
     "@vitejs/plugin-react": "4.5.2",
     "eslint": "^9.16.0",
     "eslint-config-next": "15.4.7",
