@@ -49,7 +49,7 @@ export default async function HomePage() {
         </div>
       </div>
       <div className="footer">
-        <p>CECI Update this page by editing</p>
+        <p>CELA Update this page by editing</p>
         <a className="codeLink" href={fileURL}>
           <code>app/(frontend)/page.tsx</code>
         </a>
