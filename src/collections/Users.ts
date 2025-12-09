@@ -38,6 +38,7 @@ export const Users: CollectionConfig = {
     delete: () => false,
   },
   auth: {
+    loginWithUsername: false,
     verify: {
       generateEmailHTML: ({ token, user }) => {
         // URL de validation du compte

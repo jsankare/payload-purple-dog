@@ -1015,6 +1015,500 @@ export const swaggerPaths = {
     },
   },
 
+  // ========== Routes Feedback (Avis Plateforme) ==========
+  '/api/feedback/submit': {
+    post: {
+      tags: ['Feedback'],
+      summary: 'Soumettre un avis sur la plateforme',
+      description: 'Permet à un utilisateur authentifié de donner son avis avec étoiles, score NPS et commentaire',
+      security: [{ bearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['stars', 'npsScore'],
+              properties: {
+                stars: { 
+                  type: 'integer', 
+                  minimum: 1, 
+                  maximum: 5, 
+                  example: 5, 
+                  description: 'Note en étoiles (1 à 5)' 
+                },
+                npsScore: { 
+                  type: 'integer', 
+                  minimum: 1, 
+                  maximum: 10, 
+                  example: 9, 
+                  description: 'Score NPS - probabilité de recommandation (1 à 10)' 
+                },
+                comment: { 
+                  type: 'string', 
+                  example: 'Excellente plateforme, très intuitive !', 
+                  description: 'Commentaires et suggestions (optionnel)' 
+                },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'Avis soumis avec succès',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  message: { type: 'string', example: 'Merci pour votre avis ! Il est maintenant visible.' },
+                  feedback: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'integer', example: 1 },
+                      stars: { type: 'integer', example: 5 },
+                      npsScore: { type: 'integer', example: 9 },
+                      comment: { type: 'string', example: 'Excellente plateforme !' },
+                      createdAt: { type: 'string', format: 'date-time' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        '400': {
+          description: 'Données invalides',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  error: { type: 'string', example: 'La note étoiles doit être entre 1 et 5' },
+                },
+              },
+            },
+          },
+        },
+        '401': {
+          description: 'Non authentifié',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/Error' },
+            },
+          },
+        },
+      },
+    },
+  },
+
+  '/api/feedback/my-feedback': {
+    get: {
+      tags: ['Feedback'],
+      summary: 'Récupérer ses propres avis',
+      description: 'Récupère tous les avis soumis par l\'utilisateur connecté, triés par date (plus récent en premier)',
+      security: [{ bearerAuth: [] }],
+      responses: {
+        '200': {
+          description: 'Liste des avis de l\'utilisateur',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  feedbacks: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'integer', example: 1 },
+                        stars: { type: 'integer', example: 5 },
+                        npsScore: { type: 'integer', example: 9 },
+                        comment: { type: 'string', example: 'Super plateforme !' },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        updatedAt: { type: 'string', format: 'date-time' },
+                      },
+                    },
+                  },
+                  total: { type: 'integer', example: 3, description: 'Nombre total d\'avis' },
+                },
+              },
+            },
+          },
+        },
+        '401': {
+          description: 'Non authentifié',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/Error' },
+            },
+          },
+        },
+      },
+    },
+  },
+
+  '/api/feedback/all': {
+    get: {
+      tags: ['Feedback'],
+      summary: 'Récupérer tous les avis (Admin uniquement)',
+      description: '**Admin uniquement** - Récupère tous les avis de tous les utilisateurs avec les informations utilisateur',
+      security: [{ bearerAuth: [] }],
+      responses: {
+        '200': {
+          description: 'Liste de tous les avis',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  feedbacks: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'integer', example: 1 },
+                        stars: { type: 'integer', example: 5 },
+                        npsScore: { type: 'integer', example: 9 },
+                        comment: { type: 'string', example: 'Excellente plateforme !' },
+                        user: {
+                          type: 'object',
+                          properties: {
+                            id: { type: 'integer', example: 3 },
+                            email: { type: 'string', example: 'user@example.com' },
+                            firstName: { type: 'string', example: 'Jean' },
+                            lastName: { type: 'string', example: 'Dupont' },
+                          },
+                        },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        updatedAt: { type: 'string', format: 'date-time' },
+                      },
+                    },
+                  },
+                  total: { type: 'integer', example: 150, description: 'Nombre total d\'avis' },
+                },
+              },
+            },
+          },
+        },
+        '401': {
+          description: 'Non authentifié',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/Error' },
+            },
+          },
+        },
+        '403': {
+          description: 'Accès refusé (admin uniquement)',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  error: { type: 'string', example: 'Accès refusé. Admin uniquement.' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+
+  '/api/feedback/{id}': {
+    put: {
+      tags: ['Feedback'],
+      summary: 'Modifier un avis',
+      description: 'Permet de modifier un avis existant. Un utilisateur peut modifier ses propres avis, un admin peut modifier n\'importe quel avis. Modification partielle possible.',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'id',
+          in: 'path',
+          required: true,
+          schema: { type: 'integer' },
+          description: 'ID de l\'avis à modifier',
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                stars: { 
+                  type: 'integer', 
+                  minimum: 1, 
+                  maximum: 5, 
+                  example: 4, 
+                  description: 'Note en étoiles (1 à 5) - optionnel' 
+                },
+                npsScore: { 
+                  type: 'integer', 
+                  minimum: 1, 
+                  maximum: 10, 
+                  example: 8, 
+                  description: 'Score NPS (1 à 10) - optionnel' 
+                },
+                comment: { 
+                  type: 'string', 
+                  example: 'Commentaire modifié', 
+                  description: 'Commentaires - optionnel' 
+                },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'Avis modifié avec succès',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  message: { type: 'string', example: 'Avis modifié avec succès' },
+                  feedback: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'integer', example: 1 },
+                      stars: { type: 'integer', example: 4 },
+                      npsScore: { type: 'integer', example: 8 },
+                      comment: { type: 'string', example: 'Commentaire modifié' },
+                      createdAt: { type: 'string', format: 'date-time' },
+                      updatedAt: { type: 'string', format: 'date-time' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        '400': {
+          description: 'ID invalide ou données invalides',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  error: { type: 'string', example: 'La note étoiles doit être entre 1 et 5' },
+                },
+              },
+            },
+          },
+        },
+        '401': {
+          description: 'Non authentifié',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/Error' },
+            },
+          },
+        },
+        '403': {
+          description: 'Pas la permission de modifier',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  error: { type: 'string', example: 'Vous n\'avez pas la permission de modifier cet avis' },
+                },
+              },
+            },
+          },
+        },
+        '404': {
+          description: 'Avis non trouvé',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  error: { type: 'string', example: 'Avis non trouvé' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    delete: {
+      tags: ['Feedback'],
+      summary: 'Supprimer un avis',
+      description: 'Permet de supprimer un avis. Un utilisateur peut supprimer ses propres avis, un admin peut supprimer n\'importe quel avis.',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: 'id',
+          in: 'path',
+          required: true,
+          schema: { type: 'integer' },
+          description: 'ID de l\'avis à supprimer',
+        },
+      ],
+      responses: {
+        '200': {
+          description: 'Avis supprimé avec succès',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  message: { type: 'string', example: 'Avis supprimé avec succès' },
+                },
+              },
+            },
+          },
+        },
+        '400': {
+          description: 'ID invalide',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  error: { type: 'string', example: 'ID invalide' },
+                },
+              },
+            },
+          },
+        },
+        '401': {
+          description: 'Non authentifié',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/Error' },
+            },
+          },
+        },
+        '403': {
+          description: 'Pas la permission de supprimer',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  error: { type: 'string', example: 'Vous n\'avez pas la permission de supprimer cet avis' },
+                },
+              },
+            },
+          },
+        },
+        '404': {
+          description: 'Avis non trouvé',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  error: { type: 'string', example: 'Avis non trouvé' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+
+  '/api/feedback/stats': {
+    get: {
+      tags: ['Feedback'],
+      summary: 'Statistiques des avis (Admin uniquement)',
+      description: '**Admin uniquement** - Récupère les statistiques globales : moyennes, distribution, score NPS calculé, avis récents',
+      security: [{ bearerAuth: [] }],
+      responses: {
+        '200': {
+          description: 'Statistiques des avis',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  stats: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'integer', example: 150, description: 'Nombre total d\'avis' },
+                      averageStars: { type: 'number', example: 4.3, description: 'Moyenne des étoiles' },
+                      averageNps: { type: 'number', example: 8.2, description: 'Moyenne NPS' },
+                      npsScore: { type: 'integer', example: 45, description: 'Score NPS final ((promoteurs - détracteurs) / total × 100)' },
+                      starsDistribution: {
+                        type: 'object',
+                        properties: {
+                          '1': { type: 'integer', example: 5 },
+                          '2': { type: 'integer', example: 10 },
+                          '3': { type: 'integer', example: 20 },
+                          '4': { type: 'integer', example: 50 },
+                          '5': { type: 'integer', example: 65 },
+                        },
+                        description: 'Distribution par nombre d\'étoiles',
+                      },
+                      npsCategories: {
+                        type: 'object',
+                        properties: {
+                          promoters: { type: 'integer', example: 80, description: 'Score 9-10 : Très satisfaits' },
+                          passives: { type: 'integer', example: 50, description: 'Score 7-8 : Satisfaits' },
+                          detractors: { type: 'integer', example: 20, description: 'Score 1-6 : Insatisfaits' },
+                        },
+                      },
+                    },
+                  },
+                  recentFeedbacks: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'integer' },
+                        stars: { type: 'integer' },
+                        npsScore: { type: 'integer' },
+                        comment: { type: 'string' },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        user: { type: 'integer', description: 'ID de l\'utilisateur' },
+                      },
+                    },
+                    description: 'Les 5 avis les plus récents',
+                  },
+                },
+              },
+            },
+          },
+        },
+        '401': {
+          description: 'Non authentifié',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/Error' },
+            },
+          },
+        },
+        '403': {
+          description: 'Accès refusé (admin uniquement)',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  error: { type: 'string', example: 'Accès refusé. Admin uniquement.' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+
   // ========== Routes Init Plans ==========
   '/api/init-plans': {
     get: {

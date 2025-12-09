@@ -72,6 +72,7 @@ export interface Config {
     plans: Plan;
     subscriptions: Subscription;
     posts: Post;
+    feedback: Feedback;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -84,6 +85,7 @@ export interface Config {
     plans: PlansSelect<false> | PlansSelect<true>;
     subscriptions: SubscriptionsSelect<false> | SubscriptionsSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
+    feedback: FeedbackSelect<false> | FeedbackSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -295,6 +297,31 @@ export interface Post {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "feedback".
+ */
+export interface Feedback {
+  id: number;
+  /**
+   * Utilisateur ayant donné l'avis
+   */
+  user: number | User;
+  /**
+   * Note en étoiles (1 à 5)
+   */
+  stars: number;
+  /**
+   * Note NPS (1 à 10)
+   */
+  npsScore: number;
+  /**
+   * Commentaires et suggestions
+   */
+  comment?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -336,6 +363,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'posts';
         value: number | Post;
+      } | null)
+    | ({
+        relationTo: 'feedback';
+        value: number | Feedback;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -502,6 +533,18 @@ export interface SubscriptionsSelect<T extends boolean = true> {
  */
 export interface PostsSelect<T extends boolean = true> {
   title?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "feedback_select".
+ */
+export interface FeedbackSelect<T extends boolean = true> {
+  user?: T;
+  stars?: T;
+  npsScore?: T;
+  comment?: T;
   updatedAt?: T;
   createdAt?: T;
 }
