@@ -60,6 +60,9 @@ export const Users: CollectionConfig = {
       },
       generateEmailSubject: () => 'Validez votre compte',
     },
+    tokenExpiration: 7200,
+    maxLoginAttempts: 5,
+    lockTime: 600000,
   },
   fields: [
     // Rôle de l'utilisateur
@@ -143,14 +146,6 @@ export const Users: CollectionConfig = {
     },
 
     // ========== CHAMPS SPÉCIFIQUES PARTICULIER ==========
-    {
-      name: 'age',
-      type: 'number',
-      label: 'Âge',
-      admin: {
-        condition: (data) => data.role === 'particulier',
-      },
-    },
     {
       name: 'isOver18',
       type: 'checkbox',
@@ -315,16 +310,6 @@ export const Users: CollectionConfig = {
 
     // ========== CHAMPS SYSTÈME ==========
     {
-      name: 'emailVerified',
-      type: 'checkbox',
-      label: 'Email vérifié',
-      defaultValue: false,
-      admin: {
-        position: 'sidebar',
-        readOnly: true,
-      },
-    },
-    {
       name: 'accountStatus',
       type: 'select',
       label: 'Statut du compte',
@@ -349,6 +334,8 @@ export const Users: CollectionConfig = {
       ],
       admin: {
         position: 'sidebar',
+        readOnly: true,
+        condition: (data, siblingData, { user }) => user?.role === 'admin', // Visible uniquement pour les admins
       },
     },
 
@@ -361,6 +348,7 @@ export const Users: CollectionConfig = {
       admin: {
         position: 'sidebar',
         readOnly: true,
+        condition: (data, siblingData, { operation }) => operation === 'update', // Visible uniquement en modification
       },
     },
     {
@@ -396,6 +384,7 @@ export const Users: CollectionConfig = {
       admin: {
         position: 'sidebar',
         readOnly: true,
+        condition: (data, siblingData, { operation }) => operation === 'update', // Visible uniquement en modification
       },
     },
 
@@ -407,6 +396,7 @@ export const Users: CollectionConfig = {
       admin: {
         position: 'sidebar',
         readOnly: true,
+        condition: (data, siblingData, { operation }) => operation === 'update', // Visible uniquement en modification
       },
     },
     {
@@ -416,6 +406,7 @@ export const Users: CollectionConfig = {
       admin: {
         position: 'sidebar',
         readOnly: true,
+        condition: (data, siblingData, { operation }) => operation === 'update', // Visible uniquement en modification
       },
     },
   ],

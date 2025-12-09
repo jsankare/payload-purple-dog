@@ -69,9 +69,9 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
-    posts: Post;
     plans: Plan;
     subscriptions: Subscription;
+    posts: Post;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -81,9 +81,9 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
-    posts: PostsSelect<false> | PostsSelect<true>;
     plans: PlansSelect<false> | PlansSelect<true>;
     subscriptions: SubscriptionsSelect<false> | SubscriptionsSelect<true>;
+    posts: PostsSelect<false> | PostsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -138,7 +138,6 @@ export interface User {
     postalCode: string;
     country: string;
   };
-  age?: number | null;
   isOver18?: boolean | null;
   companyName?: string | null;
   siret?: string | null;
@@ -157,7 +156,6 @@ export interface User {
   acceptedMandate?: boolean | null;
   acceptedGDPR?: boolean | null;
   newsletterSubscription?: boolean | null;
-  emailVerified?: boolean | null;
   accountStatus?: ('pending' | 'active' | 'suspended' | 'rejected') | null;
   currentSubscription?: (number | null) | Subscription;
   subscriptionStatus?: ('active' | 'trialing' | 'suspended' | 'canceled' | 'expired' | 'restricted') | null;
@@ -201,16 +199,6 @@ export interface Media {
   height?: number | null;
   focalX?: number | null;
   focalY?: number | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "posts".
- */
-export interface Post {
-  id: number;
-  title?: string | null;
-  updatedAt: string;
-  createdAt: string;
 }
 /**
  * Historique et gestion des abonnements utilisateurs
@@ -297,6 +285,16 @@ export interface Plan {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "posts".
+ */
+export interface Post {
+  id: number;
+  title?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -328,16 +326,16 @@ export interface PayloadLockedDocument {
         value: number | Media;
       } | null)
     | ({
-        relationTo: 'posts';
-        value: number | Post;
-      } | null)
-    | ({
         relationTo: 'plans';
         value: number | Plan;
       } | null)
     | ({
         relationTo: 'subscriptions';
         value: number | Subscription;
+      } | null)
+    | ({
+        relationTo: 'posts';
+        value: number | Post;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -398,7 +396,6 @@ export interface UsersSelect<T extends boolean = true> {
         postalCode?: T;
         country?: T;
       };
-  age?: T;
   isOver18?: T;
   companyName?: T;
   siret?: T;
@@ -416,7 +413,6 @@ export interface UsersSelect<T extends boolean = true> {
   acceptedMandate?: T;
   acceptedGDPR?: T;
   newsletterSubscription?: T;
-  emailVerified?: T;
   accountStatus?: T;
   currentSubscription?: T;
   subscriptionStatus?: T;
@@ -461,15 +457,6 @@ export interface MediaSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "posts_select".
- */
-export interface PostsSelect<T extends boolean = true> {
-  title?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "plans_select".
  */
 export interface PlansSelect<T extends boolean = true> {
@@ -506,6 +493,15 @@ export interface SubscriptionsSelect<T extends boolean = true> {
   paymentMethod?: T;
   amount?: T;
   notes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "posts_select".
+ */
+export interface PostsSelect<T extends boolean = true> {
+  title?: T;
   updatedAt?: T;
   createdAt?: T;
 }
