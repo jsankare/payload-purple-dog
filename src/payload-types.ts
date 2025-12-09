@@ -69,6 +69,8 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
+    plans: Plan;
+    subscriptions: Subscription;
     posts: Post;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -79,6 +81,8 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    plans: PlansSelect<false> | PlansSelect<true>;
+    subscriptions: SubscriptionsSelect<false> | SubscriptionsSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -124,9 +128,39 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
+  role: 'particulier' | 'professionnel' | 'admin';
   firstName: string;
   lastName: string;
-  gender: 'male' | 'female' | 'other';
+  profilePhoto?: (number | null) | Media;
+  address: {
+    street: string;
+    city: string;
+    postalCode: string;
+    country: string;
+  };
+  isOver18?: boolean | null;
+  companyName?: string | null;
+  siret?: string | null;
+  /**
+   * K-Bis, avis de situation INSEE ou autre document officiel
+   */
+  officialDocument?: (number | null) | Media;
+  website?: string | null;
+  socialMedia?: {
+    facebook?: string | null;
+    instagram?: string | null;
+    linkedin?: string | null;
+    twitter?: string | null;
+  };
+  acceptedTerms?: boolean | null;
+  acceptedMandate?: boolean | null;
+  acceptedGDPR?: boolean | null;
+  newsletterSubscription?: boolean | null;
+  accountStatus?: ('pending' | 'active' | 'suspended' | 'rejected') | null;
+  currentSubscription?: (number | null) | Subscription;
+  subscriptionStatus?: ('active' | 'trialing' | 'suspended' | 'canceled' | 'expired' | 'restricted') | null;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -134,6 +168,8 @@ export interface User {
   resetPasswordExpiration?: string | null;
   salt?: string | null;
   hash?: string | null;
+  _verified?: boolean | null;
+  _verificationToken?: string | null;
   loginAttempts?: number | null;
   lockUntil?: string | null;
   sessions?:
@@ -151,7 +187,7 @@ export interface User {
  */
 export interface Media {
   id: number;
-  alt: string;
+  alt?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -163,6 +199,89 @@ export interface Media {
   height?: number | null;
   focalX?: number | null;
   focalY?: number | null;
+}
+/**
+ * Historique et gestion des abonnements utilisateurs
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "subscriptions".
+ */
+export interface Subscription {
+  id: number;
+  user: number | User;
+  plan: number | Plan;
+  status: 'active' | 'trialing' | 'suspended' | 'canceled' | 'expired';
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  trialEnd?: string | null;
+  canceledAt?: string | null;
+  /**
+   * L'abonnement sera automatiquement renouvelé à la fin de la période
+   */
+  autoRenew?: boolean | null;
+  paymentMethod?: ('card' | 'paypal' | 'bank_transfer' | 'free') | null;
+  /**
+   * Montant réellement payé pour cette période
+   */
+  amount?: number | null;
+  /**
+   * Notes internes sur cet abonnement
+   */
+  notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Gestion des forfaits d'abonnement pour la plateforme
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "plans".
+ */
+export interface Plan {
+  id: number;
+  /**
+   * Nom affiché du forfait (ex: "Forfait Particulier", "Forfait Professionnel")
+   */
+  name: string;
+  /**
+   * Identifiant technique unique (ex: "particulier", "professionnel")
+   */
+  slug: string;
+  /**
+   * À quel type d'utilisateur s'applique ce forfait
+   */
+  userType: 'particulier' | 'professionnel';
+  /**
+   * Prix en euros par mois. Mettre 0 pour gratuit.
+   */
+  price: number;
+  /**
+   * Nombre de jours d'essai gratuit. Mettre 0 pour aucune période d'essai.
+   */
+  trialPeriodDays?: number | null;
+  /**
+   * Description complète du forfait et de ses avantages
+   */
+  description?: string | null;
+  /**
+   * Liste des fonctionnalités incluses dans ce forfait
+   */
+  features?:
+    | {
+        feature: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Désactiver pour masquer ce forfait (sans le supprimer)
+   */
+  isActive?: boolean | null;
+  /**
+   * Forfait attribué automatiquement lors de l'inscription
+   */
+  isDefault?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -205,6 +324,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'plans';
+        value: number | Plan;
+      } | null)
+    | ({
+        relationTo: 'subscriptions';
+        value: number | Subscription;
       } | null)
     | ({
         relationTo: 'posts';
@@ -257,9 +384,40 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  role?: T;
   firstName?: T;
   lastName?: T;
-  gender?: T;
+  profilePhoto?: T;
+  address?:
+    | T
+    | {
+        street?: T;
+        city?: T;
+        postalCode?: T;
+        country?: T;
+      };
+  isOver18?: T;
+  companyName?: T;
+  siret?: T;
+  officialDocument?: T;
+  website?: T;
+  socialMedia?:
+    | T
+    | {
+        facebook?: T;
+        instagram?: T;
+        linkedin?: T;
+        twitter?: T;
+      };
+  acceptedTerms?: T;
+  acceptedMandate?: T;
+  acceptedGDPR?: T;
+  newsletterSubscription?: T;
+  accountStatus?: T;
+  currentSubscription?: T;
+  subscriptionStatus?: T;
+  stripeCustomerId?: T;
+  stripeSubscriptionId?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -267,6 +425,8 @@ export interface UsersSelect<T extends boolean = true> {
   resetPasswordExpiration?: T;
   salt?: T;
   hash?: T;
+  _verified?: T;
+  _verificationToken?: T;
   loginAttempts?: T;
   lockUntil?: T;
   sessions?:
@@ -294,6 +454,47 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "plans_select".
+ */
+export interface PlansSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  userType?: T;
+  price?: T;
+  trialPeriodDays?: T;
+  description?: T;
+  features?:
+    | T
+    | {
+        feature?: T;
+        id?: T;
+      };
+  isActive?: T;
+  isDefault?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "subscriptions_select".
+ */
+export interface SubscriptionsSelect<T extends boolean = true> {
+  user?: T;
+  plan?: T;
+  status?: T;
+  currentPeriodStart?: T;
+  currentPeriodEnd?: T;
+  trialEnd?: T;
+  canceledAt?: T;
+  autoRenew?: T;
+  paymentMethod?: T;
+  amount?: T;
+  notes?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
