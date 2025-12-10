@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
       role: fullUser.role,
       address: fullUser.address,
       newsletterSubscription: fullUser.newsletterSubscription,
+      bankDetails: fullUser.bankDetails,
       _verified: fullUser._verified,
       accountStatus: fullUser.accountStatus,
       createdAt: fullUser.createdAt,

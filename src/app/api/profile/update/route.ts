@@ -40,6 +40,7 @@ export async function PUT(req: NextRequest) {
       website,
       socialMedia,
       newsletterSubscription,
+      bankInfo,
     } = body
 
     // Préparer les données à mettre à jour selon le rôle
@@ -50,6 +51,16 @@ export async function PUT(req: NextRequest) {
     if (lastName !== undefined) updateData.lastName = lastName
     if (address !== undefined) updateData.address = address
     if (newsletterSubscription !== undefined) updateData.newsletterSubscription = newsletterSubscription
+    if (bankInfo !== undefined) {
+      const hasData = bankInfo.iban || bankInfo.bic || bankInfo.accountHolder
+      if (hasData) {
+        updateData.bankDetails = {
+          iban: bankInfo.iban || undefined,
+          bic: bankInfo.bic || undefined,
+          accountHolderName: bankInfo.accountHolder || undefined,
+        }
+      }
+    }
 
     // Champs pour professionnels
     if (user.role === 'professionnel') {
