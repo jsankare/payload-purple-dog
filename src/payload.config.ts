@@ -10,7 +10,7 @@ import { fr } from 'payload/i18n/fr'
 
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
-import { Posts } from "@/collections/Page";
+import { Posts } from "@/collections/Page"
 import { Plans } from './collections/Plans'
 import { Subscriptions } from './collections/Subscriptions'
 import { Objects } from './collections/Objects'
@@ -27,7 +27,7 @@ export default buildConfig({
     },
     dateFormat: 'd MMMM yyyy, HH:mm',
   },
-  collections: [Users, Media, Plans, Subscriptions, Posts, Feedback, Objects],
+  collections: [Users, Media, Plans, Subscriptions, Posts, Objects, Feedback],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {

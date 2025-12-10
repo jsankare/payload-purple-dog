@@ -166,13 +166,13 @@ export const Users: CollectionConfig = {
     {
       name: 'companyName',
       type: 'text',
-      label: 'Dénomination de l\'entreprise',
+      label: "Dénomination de l'entreprise",
       admin: {
         condition: (data) => data.role === 'professionnel',
       },
       validate: (val: any, { data }: { data: any }) => {
         if (data.role === 'professionnel' && !val) {
-          return 'La dénomination de l\'entreprise est requise'
+          return "La dénomination de l'entreprise est requise"
         }
         return true
       },
@@ -268,7 +268,8 @@ export const Users: CollectionConfig = {
       type: 'group',
       label: 'Coordonnées bancaires',
       admin: {
-        description: 'Requis pour les professionnels (achats/enchères) et les particuliers (ventes)',
+        description:
+          'Requis pour les professionnels (achats/enchères) et les particuliers (ventes)',
       },
       fields: [
         {
@@ -289,7 +290,7 @@ export const Users: CollectionConfig = {
               }
               // Vérifier la longueur (entre 15 et 34 caractères)
               if (cleanIban.length < 15 || cleanIban.length > 34) {
-                return 'L\'IBAN doit contenir entre 15 et 34 caractères'
+                return "L'IBAN doit contenir entre 15 et 34 caractères"
               }
             }
             return true
@@ -327,7 +328,7 @@ export const Users: CollectionConfig = {
           defaultValue: false,
           admin: {
             readOnly: true,
-            description: 'Vérifié par l\'administrateur',
+            description: "Vérifié par l'administrateur",
             condition: (data, siblingData, { user }) => user?.role === 'admin',
           },
         },
@@ -338,7 +339,7 @@ export const Users: CollectionConfig = {
     {
       name: 'acceptedTerms',
       type: 'checkbox',
-      label: 'J\'accepte les CGV',
+      label: "J'accepte les CGV",
       admin: {
         condition: (data) => data.role === 'professionnel',
       },
@@ -352,13 +353,13 @@ export const Users: CollectionConfig = {
     {
       name: 'acceptedMandate',
       type: 'checkbox',
-      label: 'J\'accepte le mandat d\'apport d\'affaire',
+      label: "J'accepte le mandat d'apport d'affaire",
       admin: {
         condition: (data) => data.role === 'professionnel',
       },
       validate: (val: any, { data }: { data: any }) => {
         if (data.role === 'professionnel' && !val) {
-          return 'Vous devez accepter le mandat d\'apport d\'affaire'
+          return "Vous devez accepter le mandat d'apport d'affaire"
         }
         return true
       },
@@ -366,7 +367,7 @@ export const Users: CollectionConfig = {
     {
       name: 'acceptedGDPR',
       type: 'checkbox',
-      label: 'J\'accepte la politique de confidentialité (RGPD)',
+      label: "J'accepte la politique de confidentialité (RGPD)",
       validate: (val: any) => {
         if (!val) {
           return 'Vous devez accepter la politique de confidentialité'
@@ -377,7 +378,7 @@ export const Users: CollectionConfig = {
     {
       name: 'newsletterSubscription',
       type: 'checkbox',
-      label: 'Je souhaite m\'inscrire à la newsletter',
+      label: "Je souhaite m'inscrire à la newsletter",
       defaultValue: false,
     },
 
@@ -427,7 +428,7 @@ export const Users: CollectionConfig = {
     {
       name: 'subscriptionStatus',
       type: 'select',
-      label: 'Statut de l\'abonnement',
+      label: "Statut de l'abonnement",
       options: [
         {
           label: 'Actif',
@@ -505,7 +506,7 @@ export const Users: CollectionConfig = {
                 const customer = await createStripeCustomer(
                   doc.email,
                   `${doc.firstName} ${doc.lastName}`,
-                  doc.id
+                  doc.id,
                 )
 
                 // Mettre à jour l'utilisateur avec le customer Stripe
@@ -517,13 +518,9 @@ export const Users: CollectionConfig = {
                   },
                 })
 
-                req.payload.logger.info(
-                  `Customer Stripe créé pour ${doc.email}: ${customer.id}`
-                )
+                req.payload.logger.info(`Customer Stripe créé pour ${doc.email}: ${customer.id}`)
               } catch (error) {
-                req.payload.logger.error(
-                  `Erreur lors de la création du customer Stripe : ${error}`
-                )
+                req.payload.logger.error(`Erreur lors de la création du customer Stripe : ${error}`)
               }
             }, 1000) // Attendre 1 seconde pour que la transaction soit commitée
           }
@@ -575,13 +572,11 @@ export const Users: CollectionConfig = {
                   },
                 })
 
-                req.payload.logger.info(
-                  `Abonnement gratuit créé pour le particulier ${doc.email}`
-                )
+                req.payload.logger.info(`Abonnement gratuit créé pour le particulier ${doc.email}`)
               }
             } catch (error) {
               req.payload.logger.error(
-                `Erreur lors de la création de l'abonnement particulier : ${error}`
+                `Erreur lors de la création de l'abonnement particulier : ${error}`,
               )
             }
           }
