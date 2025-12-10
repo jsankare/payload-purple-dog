@@ -72,6 +72,7 @@ export interface Config {
     plans: Plan;
     subscriptions: Subscription;
     posts: Post;
+    objects: Object;
     feedback: Feedback;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -85,6 +86,7 @@ export interface Config {
     plans: PlansSelect<false> | PlansSelect<true>;
     subscriptions: SubscriptionsSelect<false> | SubscriptionsSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
+    objects: ObjectsSelect<false> | ObjectsSelect<true>;
     feedback: FeedbackSelect<false> | FeedbackSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -191,8 +193,6 @@ export interface User {
   resetPasswordExpiration?: string | null;
   salt?: string | null;
   hash?: string | null;
-  _verified?: boolean | null;
-  _verificationToken?: string | null;
   loginAttempts?: number | null;
   lockUntil?: string | null;
   sessions?:
@@ -318,6 +318,42 @@ export interface Post {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "objects".
+ */
+export interface Object {
+  id: number;
+  name: string;
+  category:
+    | 'jewelry_watches'
+    | 'antique_furniture'
+    | 'art_paintings'
+    | 'collectibles'
+    | 'fine_wines'
+    | 'instruments'
+    | 'rare_books'
+    | 'classic_cars'
+    | 'luxury_fashion'
+    | 'clocks'
+    | 'vintage_photo'
+    | 'tableware'
+    | 'decorative_art'
+    | 'vintage_vehicles';
+  dimensions: {
+    height: number;
+    width: number;
+    depth: number;
+  };
+  weight: number;
+  description: string;
+  documents?:
+    | {
+        name: string;
+        file: number | Media;
+        description?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  seller?: (number | null) | User;
  * via the `definition` "feedback".
  */
 export interface Feedback {
@@ -386,6 +422,8 @@ export interface PayloadLockedDocument {
         value: number | Post;
       } | null)
     | ({
+        relationTo: 'objects';
+        value: number | Object;
         relationTo: 'feedback';
         value: number | Feedback;
       } | null);
@@ -485,8 +523,6 @@ export interface UsersSelect<T extends boolean = true> {
   resetPasswordExpiration?: T;
   salt?: T;
   hash?: T;
-  _verified?: T;
-  _verificationToken?: T;
   loginAttempts?: T;
   lockUntil?: T;
   sessions?:
@@ -567,6 +603,29 @@ export interface PostsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "objects_select".
+ */
+export interface ObjectsSelect<T extends boolean = true> {
+  name?: T;
+  category?: T;
+  dimensions?:
+    | T
+    | {
+        height?: T;
+        width?: T;
+        depth?: T;
+      };
+  weight?: T;
+  description?: T;
+  documents?:
+    | T
+    | {
+        name?: T;
+        file?: T;
+        description?: T;
+        id?: T;
+      };
+  seller?: T;
  * via the `definition` "feedback_select".
  */
 export interface FeedbackSelect<T extends boolean = true> {
