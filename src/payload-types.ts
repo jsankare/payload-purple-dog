@@ -301,30 +301,36 @@ export interface Object {
   id: number;
   name: string;
   category:
-    | 'jewelry-watches'
-    | 'antique-furniture'
-    | 'art-paintings'
+    | 'jewelry_watches'
+    | 'antique_furniture'
+    | 'art_paintings'
     | 'collectibles'
-    | 'fine-wines'
+    | 'fine_wines'
     | 'instruments'
-    | 'rare-books'
-    | 'classic-cars'
-    | 'luxury-fashion'
+    | 'rare_books'
+    | 'classic_cars'
+    | 'luxury_fashion'
     | 'clocks'
-    | 'vintage-photo'
+    | 'vintage_photo'
     | 'tableware'
-    | 'decorative-art'
-    | 'vintage-vehicles';
+    | 'decorative_art'
+    | 'vintage_vehicles';
   dimensions: {
-    height?: number | null;
-    width?: number | null;
-    depth?: number | null;
+    height: number;
+    width: number;
+    depth: number;
   };
   weight: number;
   description: string;
-  documents: {
-    documents: number | Media;
-  };
+  documents?:
+    | {
+        name: string;
+        file: number | Media;
+        description?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  seller?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
 }
@@ -561,8 +567,12 @@ export interface ObjectsSelect<T extends boolean = true> {
   documents?:
     | T
     | {
-        documents?: T;
+        name?: T;
+        file?: T;
+        description?: T;
+        id?: T;
       };
+  seller?: T;
   updatedAt?: T;
   createdAt?: T;
 }
