@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
         id: f.id,
         stars: f.stars,
         npsScore: f.npsScore,
-        comment: f.comment?.substring(0, 100) + (f.comment?.length > 100 ? '...' : ''),
+        comment: f.comment ? (f.comment.length > 100 ? f.comment.substring(0, 100) + '...' : f.comment) : '',
         createdAt: f.createdAt,
         user: f.user,
       }))

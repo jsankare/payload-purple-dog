@@ -10,9 +10,10 @@ import config from '@/payload.config'
  */
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await props.params
     const payload = await getPayload({ config })
     
     // Vérifier l'authentification
@@ -118,9 +119,10 @@ export async function PUT(
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await props.params
     const payload = await getPayload({ config })
     
     // Vérifier l'authentification
