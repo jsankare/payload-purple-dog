@@ -73,6 +73,8 @@ export interface Config {
     subscriptions: Subscription;
     posts: Post;
     feedback: Feedback;
+    objects: Object;
+    bids: Bid;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -86,6 +88,8 @@ export interface Config {
     subscriptions: SubscriptionsSelect<false> | SubscriptionsSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
     feedback: FeedbackSelect<false> | FeedbackSelect<true>;
+    objects: ObjectsSelect<false> | ObjectsSelect<true>;
+    bids: BidsSelect<false> | BidsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -343,6 +347,103 @@ export interface Feedback {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "objects".
+ */
+export interface Object {
+  id: number;
+  name: string;
+  category:
+    | 'bijoux-montres'
+    | 'meubles-anciens'
+    | 'objets-art-tableaux'
+    | 'objets-collection'
+    | 'vins-spiritueux'
+    | 'instruments-musique'
+    | 'livres-manuscrits'
+    | 'mode-luxe'
+    | 'horlogerie-pendules'
+    | 'photographies-vintage'
+    | 'vaisselle-argenterie'
+    | 'sculptures-decoratifs'
+    | 'vehicules-collection';
+  description: string;
+  dimensions: {
+    length: number;
+    width: number;
+    height: number;
+    weight: number;
+  };
+  /**
+   * Certificats d'authenticité, preuves d'achat, etc.
+   */
+  documents?:
+    | {
+        document: number | Media;
+        description?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Minimum 10 photos, maximum 20
+   */
+  photos: {
+    photo: number | Media;
+    id?: string | null;
+  }[];
+  /**
+   * Prix que vous souhaitez obtenir
+   */
+  price: number;
+  saleMode: 'auction' | 'quick-sale';
+  auctionConfig?: {
+    /**
+     * Par défaut : -10% du prix souhaité
+     */
+    startingPrice?: number | null;
+    /**
+     * Prix minimum pour vendre
+     */
+    reservePrice?: number | null;
+    duration?: number | null;
+    startDate?: string | null;
+    endDate?: string | null;
+    currentBid?: number | null;
+    bidCount?: number | null;
+  };
+  seller: number | User;
+  status: 'draft' | 'pending' | 'active' | 'sold' | 'withdrawn' | 'rejected' | 'expired';
+  buyer?: (number | null) | User;
+  soldPrice?: number | null;
+  soldDate?: string | null;
+  views?: number | null;
+  favorites?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "bids".
+ */
+export interface Bid {
+  id: number;
+  object: number | Object;
+  bidder: number | User;
+  amount: number;
+  bidType: 'manual' | 'automatic';
+  /**
+   * Si enchère automatique, montant maximum à enchérir
+   */
+  maxAutoBid?: number | null;
+  status: 'active' | 'outbid' | 'winning' | 'lost';
+  /**
+   * Email de notification envoyé à l'enchérisseur
+   */
+  notified?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -388,6 +489,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'feedback';
         value: number | Feedback;
+      } | null)
+    | ({
+        relationTo: 'objects';
+        value: number | Object;
+      } | null)
+    | ({
+        relationTo: 'bids';
+        value: number | Bid;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -574,6 +683,73 @@ export interface FeedbackSelect<T extends boolean = true> {
   stars?: T;
   npsScore?: T;
   comment?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "objects_select".
+ */
+export interface ObjectsSelect<T extends boolean = true> {
+  name?: T;
+  category?: T;
+  description?: T;
+  dimensions?:
+    | T
+    | {
+        length?: T;
+        width?: T;
+        height?: T;
+        weight?: T;
+      };
+  documents?:
+    | T
+    | {
+        document?: T;
+        description?: T;
+        id?: T;
+      };
+  photos?:
+    | T
+    | {
+        photo?: T;
+        id?: T;
+      };
+  price?: T;
+  saleMode?: T;
+  auctionConfig?:
+    | T
+    | {
+        startingPrice?: T;
+        reservePrice?: T;
+        duration?: T;
+        startDate?: T;
+        endDate?: T;
+        currentBid?: T;
+        bidCount?: T;
+      };
+  seller?: T;
+  status?: T;
+  buyer?: T;
+  soldPrice?: T;
+  soldDate?: T;
+  views?: T;
+  favorites?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "bids_select".
+ */
+export interface BidsSelect<T extends boolean = true> {
+  object?: T;
+  bidder?: T;
+  amount?: T;
+  bidType?: T;
+  maxAutoBid?: T;
+  status?: T;
+  notified?: T;
   updatedAt?: T;
   createdAt?: T;
 }
