@@ -38,32 +38,29 @@ export const Users: CollectionConfig = {
     delete: () => false,
   },
   auth: {
-    // verify: {
-    //   generateEmailHTML: ({ token, user }) => {
-    //     // URL de validation du compte
-    //     const url = `${process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000'}/verify?token=${token}`
+    loginWithUsername: false,
+    verify: {
+      generateEmailHTML: ({ token, user }) => {
+        // URL de validation du compte
+        const url = `${process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000'}/verify?token=${token}`
 
-    //     return `
-    //       <!DOCTYPE html>
-    //       <html>
-    //         <head>
-    //           <meta charset="utf-8">
-    //         </head>
-    //         <body>
-    //           <h1>Bienvenue ${user.firstName || 'sur notre plateforme'} !</h1>
-    //           <p>Merci de vous être inscrit. Veuillez cliquer sur le lien ci-dessous pour valider votre compte :</p>
-    //           <p><a href="${url}">Valider mon compte</a></p>
-    //           <p>Si vous n'êtes pas à l'origine de cette inscription, veuillez ignorer cet email.</p>
-    //         </body>
-    //       </html>
-    //     `
-    //   },
-    //   generateEmailSubject: () => 'Validez votre compte',
-    // },
-    tokenExpiration: 7200,
-    maxLoginAttempts: 5,
-    lockTime: 600000,
-  },
+        return `
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="utf-8">
+            </head>
+            <body>
+              <h1>Bienvenue ${user.firstName || 'sur notre plateforme'} !</h1>
+              <p>Merci de vous être inscrit. Veuillez cliquer sur le lien ci-dessous pour valider votre compte :</p>
+              <p><a href="${url}">Valider mon compte</a></p>
+              <p>Si vous n'êtes pas à l'origine de cette inscription, veuillez ignorer cet email.</p>
+            </body>
+          </html>
+        `
+      },
+      generateEmailSubject: () => 'Validez votre compte',
+    },
   fields: [
     // Rôle de l'utilisateur
     {
@@ -257,6 +254,78 @@ export const Users: CollectionConfig = {
           name: 'twitter',
           type: 'text',
           label: 'Twitter/X',
+        },
+      ],
+    },
+
+    // ========== COORDONNÉES BANCAIRES ==========
+    {
+      name: 'bankDetails',
+      type: 'group',
+      label: 'Coordonnées bancaires',
+      admin: {
+        description: 'Requis pour les professionnels (achats/enchères) et les particuliers (ventes)',
+      },
+      fields: [
+        {
+          name: 'iban',
+          type: 'text',
+          label: 'IBAN',
+          admin: {
+            description: 'Format: FR76 1234 5678 9012 3456 7890 123',
+          },
+          validate: (val: any, { data }: { data: any }) => {
+            // Validation IBAN pour professionnels et particuliers
+            if (val) {
+              // Supprimer les espaces
+              const cleanIban = val.replace(/\s/g, '')
+              // Vérifier le format basique (2 lettres + 2 chiffres + alphanumériques)
+              if (!/^[A-Z]{2}\d{2}[A-Z0-9]+$/.test(cleanIban)) {
+                return 'Format IBAN invalide (ex: FR7612345678901234567890123)'
+              }
+              // Vérifier la longueur (entre 15 et 34 caractères)
+              if (cleanIban.length < 15 || cleanIban.length > 34) {
+                return 'L\'IBAN doit contenir entre 15 et 34 caractères'
+              }
+            }
+            return true
+          },
+        },
+        {
+          name: 'bic',
+          type: 'text',
+          label: 'BIC/SWIFT',
+          admin: {
+            description: 'Code BIC/SWIFT de la banque (8 ou 11 caractères)',
+          },
+          validate: (val: any) => {
+            if (val) {
+              // Vérifier le format BIC (8 ou 11 caractères alphanumériques)
+              if (!/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(val.toUpperCase())) {
+                return 'Format BIC invalide (8 ou 11 caractères, ex: BNPAFRPP)'
+              }
+            }
+            return true
+          },
+        },
+        {
+          name: 'accountHolderName',
+          type: 'text',
+          label: 'Titulaire du compte',
+          admin: {
+            description: 'Nom du titulaire du compte bancaire',
+          },
+        },
+        {
+          name: 'bankDetailsVerified',
+          type: 'checkbox',
+          label: 'Coordonnées bancaires vérifiées',
+          defaultValue: false,
+          admin: {
+            readOnly: true,
+            description: 'Vérifié par l\'administrateur',
+            condition: (data, siblingData, { user }) => user?.role === 'admin',
+          },
         },
       ],
     },

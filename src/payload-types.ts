@@ -73,6 +73,7 @@ export interface Config {
     subscriptions: Subscription;
     posts: Post;
     objects: Object;
+    feedback: Feedback;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -86,6 +87,7 @@ export interface Config {
     subscriptions: SubscriptionsSelect<false> | SubscriptionsSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
     objects: ObjectsSelect<false> | ObjectsSelect<true>;
+    feedback: FeedbackSelect<false> | FeedbackSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -153,6 +155,27 @@ export interface User {
     instagram?: string | null;
     linkedin?: string | null;
     twitter?: string | null;
+  };
+  /**
+   * Requis pour les professionnels (achats/enchères) et les particuliers (ventes)
+   */
+  bankDetails?: {
+    /**
+     * Format: FR76 1234 5678 9012 3456 7890 123
+     */
+    iban?: string | null;
+    /**
+     * Code BIC/SWIFT de la banque (8 ou 11 caractères)
+     */
+    bic?: string | null;
+    /**
+     * Nom du titulaire du compte bancaire
+     */
+    accountHolderName?: string | null;
+    /**
+     * Vérifié par l'administrateur
+     */
+    bankDetailsVerified?: boolean | null;
   };
   acceptedTerms?: boolean | null;
   acceptedMandate?: boolean | null;
@@ -331,6 +354,26 @@ export interface Object {
       }[]
     | null;
   seller?: (number | null) | User;
+ * via the `definition` "feedback".
+ */
+export interface Feedback {
+  id: number;
+  /**
+   * Utilisateur ayant donné l'avis
+   */
+  user: number | User;
+  /**
+   * Note en étoiles (1 à 5)
+   */
+  stars: number;
+  /**
+   * Note NPS (1 à 10)
+   */
+  npsScore: number;
+  /**
+   * Commentaires et suggestions
+   */
+  comment?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -381,6 +424,8 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'objects';
         value: number | Object;
+        relationTo: 'feedback';
+        value: number | Feedback;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -453,6 +498,14 @@ export interface UsersSelect<T extends boolean = true> {
         instagram?: T;
         linkedin?: T;
         twitter?: T;
+      };
+  bankDetails?:
+    | T
+    | {
+        iban?: T;
+        bic?: T;
+        accountHolderName?: T;
+        bankDetailsVerified?: T;
       };
   acceptedTerms?: T;
   acceptedMandate?: T;
@@ -573,6 +626,13 @@ export interface ObjectsSelect<T extends boolean = true> {
         id?: T;
       };
   seller?: T;
+ * via the `definition` "feedback_select".
+ */
+export interface FeedbackSelect<T extends boolean = true> {
+  user?: T;
+  stars?: T;
+  npsScore?: T;
+  comment?: T;
   updatedAt?: T;
   createdAt?: T;
 }

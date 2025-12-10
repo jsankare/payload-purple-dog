@@ -14,6 +14,7 @@ import { Posts } from "@/collections/Page";
 import { Plans } from './collections/Plans'
 import { Subscriptions } from './collections/Subscriptions'
 import { Objects } from './collections/Objects'
+import { Feedback } from './collections/Feedback'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -26,7 +27,7 @@ export default buildConfig({
     },
     dateFormat: 'd MMMM yyyy, HH:mm',
   },
-  collections: [Users, Media, Plans, Subscriptions, Posts, Objects],
+  collections: [Users, Media, Plans, Subscriptions, Posts, Feedback, Objects],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
