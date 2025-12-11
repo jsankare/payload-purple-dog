@@ -37,6 +37,7 @@ export default buildConfig({
     pool: {
       connectionString: process.env.DATABASE_URI || '',
     },
+    push: true, // Activer temporairement pour créer les colonnes
   }),
   email: resendAdapter({
     defaultFromAddress: process.env.RESEND_DEFAULT_EMAIL || 'onboarding@resend.dev',
