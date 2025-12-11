@@ -5,8 +5,9 @@ import config from '@/payload.config'
 /**
  * Route pour mettre à jour le profil utilisateur
  * PUT /api/profile/update
+ * PATCH /api/profile/update
  */
-export async function PUT(req: NextRequest) {
+async function updateProfile(req: NextRequest) {
   try {
     const payload = await getPayload({ config })
     
@@ -96,4 +97,26 @@ export async function PUT(req: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// Export both PUT and PATCH methods
+export async function PUT(req: NextRequest) {
+  return updateProfile(req)
+}
+
+export async function PATCH(req: NextRequest) {
+  return updateProfile(req)
+}
+
+// Handle OPTIONS for CORS preflight
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': 'http://localhost:4000',
+      'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true',
+    },
+  })
 }

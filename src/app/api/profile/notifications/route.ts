@@ -5,8 +5,9 @@ import config from '@/payload.config'
 /**
  * Route pour gérer les préférences de notifications
  * PUT /api/profile/notifications
+ * PATCH /api/profile/notifications
  */
-export async function PUT(req: NextRequest) {
+async function updateNotifications(req: NextRequest) {
   try {
     const payload = await getPayload({ config })
     
@@ -56,6 +57,15 @@ export async function PUT(req: NextRequest) {
   }
 }
 
+// Export PUT and PATCH methods
+export async function PUT(req: NextRequest) {
+  return updateNotifications(req)
+}
+
+export async function PATCH(req: NextRequest) {
+  return updateNotifications(req)
+}
+
 /**
  * Récupérer les préférences de notifications
  * GET /api/profile/notifications
@@ -87,4 +97,17 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// Handle OPTIONS for CORS preflight
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': 'http://localhost:4000',
+      'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true',
+    },
+  })
 }
