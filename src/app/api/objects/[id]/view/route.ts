@@ -4,11 +4,11 @@ import config from '@payload-config'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const payload = await getPayload({ config })
-    const { id } = params
+    const { id } = await params
 
     const object = await payload.findByID({
       collection: 'objects',
