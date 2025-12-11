@@ -16,6 +16,9 @@ import { Subscriptions } from './collections/Subscriptions'
 import { Feedback } from './collections/Feedback'
 import { Objects } from './collections/Objects'
 import { Bids } from './collections/Bids'
+import { Categories } from './collections/Categories'
+import { Settings } from './collections/Settings'
+import { Transactions } from './collections/Transactions'
 
 import { migrations } from '@/migrations'
 
@@ -29,7 +32,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Plans, Subscriptions, Posts, Feedback, Objects, Bids],
+  collections: [Users, Media, Plans, Subscriptions, Posts, Feedback, Objects, Bids, Categories, Settings, Transactions],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {

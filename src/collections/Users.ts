@@ -23,8 +23,8 @@ export const Users: CollectionConfig = {
       }
       return false
     },
-    // Les utilisateurs peuvent mettre à jour leur propre profil
     update: ({ req: { user } }) => {
+      if (user?.role === 'admin') return true
       if (user) {
         return {
           id: {
@@ -34,8 +34,7 @@ export const Users: CollectionConfig = {
       }
       return false
     },
-    // Seuls les admins peuvent supprimer
-    delete: () => false,
+    delete: ({ req: { user } }) => user?.role === 'admin',
   },
   auth: {
     loginWithUsername: false,
@@ -404,11 +403,79 @@ export const Users: CollectionConfig = {
           label: 'Rejeté',
           value: 'rejected',
         },
+        {
+          label: 'Bloqué',
+          value: 'blocked',
+        },
       ],
       admin: {
         position: 'sidebar',
+        condition: (data, siblingData, { user }) => user?.role === 'admin',
+      },
+    },
+
+    {
+      name: 'isBlocked',
+      type: 'checkbox',
+      label: 'Compte Bloqué',
+      defaultValue: false,
+      admin: {
+        position: 'sidebar',
+        description: 'Bloquer l\'accès du compte',
+        condition: (data, siblingData, { user }) => user?.role === 'admin',
+      },
+    },
+    {
+      name: 'blockReason',
+      type: 'select',
+      label: 'Raison du Blocage',
+      options: [
+        { label: 'Fraude', value: 'fraud' },
+        { label: 'Non-paiement', value: 'non_payment' },
+        { label: 'Violation CGV', value: 'terms_violation' },
+        { label: 'Comportement inapproprié', value: 'inappropriate_behavior' },
+        { label: 'Documents falsifiés', value: 'fake_documents' },
+        { label: 'Litiges répétés', value: 'repeated_disputes' },
+        { label: 'Autre', value: 'other' },
+      ],
+      admin: {
+        position: 'sidebar',
+        condition: (data) => data.isBlocked,
+      },
+    },
+    {
+      name: 'blockReasonDetails',
+      type: 'textarea',
+      label: 'Détails du Blocage',
+      admin: {
+        position: 'sidebar',
+        description: 'Raison détaillée du blocage (interne)',
+        condition: (data) => data.isBlocked,
+      },
+    },
+    {
+      name: 'blockedAt',
+      type: 'date',
+      label: 'Date de Blocage',
+      admin: {
+        position: 'sidebar',
         readOnly: true,
-        condition: (data, siblingData, { user }) => user?.role === 'admin', // Visible uniquement pour les admins
+        condition: (data) => data.isBlocked,
+        date: {
+          pickerAppearance: 'dayAndTime',
+        },
+      },
+    },
+    {
+      name: 'blockedBy',
+      type: 'relationship',
+      relationTo: 'users',
+      label: 'Bloqué par',
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        condition: (data) => data.isBlocked,
+        description: 'Administrateur ayant effectué le blocage',
       },
     },
 
@@ -484,6 +551,31 @@ export const Users: CollectionConfig = {
     },
   ],
   hooks: {
+    beforeChange: [
+      async ({ data, req, operation }) => {
+        if (operation === 'update' && data.isBlocked && req.user?.role === 'admin') {
+          if (!data.blockedAt) {
+            data.blockedAt = new Date().toISOString()
+          }
+          if (!data.blockedBy && req.user?.id) {
+            data.blockedBy = req.user.id
+          }
+          if (data.accountStatus !== 'blocked') {
+            data.accountStatus = 'blocked'
+          }
+        }
+        
+        if (operation === 'update' && !data.isBlocked && data.accountStatus === 'blocked') {
+          data.blockReason = null
+          data.blockReasonDetails = null
+          data.blockedAt = null
+          data.blockedBy = null
+          data.accountStatus = 'active'
+        }
+        
+        return data
+      },
+    ],
     afterChange: [
       async ({ doc, operation, req }) => {
         // Lors de la création d'un compte
