@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
               id: objectId,
               data: {
                 status: 'sold',
-                buyer: buyerId,
+                buyer: parseInt(buyerId),
                 soldPrice,
                 soldDate,
               },
