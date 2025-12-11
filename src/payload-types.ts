@@ -75,6 +75,9 @@ export interface Config {
     feedback: Feedback;
     objects: Object;
     bids: Bid;
+    categories: Category;
+    settings: Setting;
+    transactions: Transaction;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -90,6 +93,9 @@ export interface Config {
     feedback: FeedbackSelect<false> | FeedbackSelect<true>;
     objects: ObjectsSelect<false> | ObjectsSelect<true>;
     bids: BidsSelect<false> | BidsSelect<true>;
+    categories: CategoriesSelect<false> | CategoriesSelect<true>;
+    settings: SettingsSelect<false> | SettingsSelect<true>;
+    transactions: TransactionsSelect<false> | TransactionsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -183,7 +189,31 @@ export interface User {
   acceptedMandate?: boolean | null;
   acceptedGDPR?: boolean | null;
   newsletterSubscription?: boolean | null;
-  accountStatus?: ('pending' | 'active' | 'suspended' | 'rejected') | null;
+  accountStatus?: ('pending' | 'active' | 'suspended' | 'rejected' | 'blocked') | null;
+  /**
+   * Bloquer l'accès du compte
+   */
+  isBlocked?: boolean | null;
+  blockReason?:
+    | (
+        | 'fraud'
+        | 'non_payment'
+        | 'terms_violation'
+        | 'inappropriate_behavior'
+        | 'fake_documents'
+        | 'repeated_disputes'
+        | 'other'
+      )
+    | null;
+  /**
+   * Raison détaillée du blocage (interne)
+   */
+  blockReasonDetails?: string | null;
+  blockedAt?: string | null;
+  /**
+   * Administrateur ayant effectué le blocage
+   */
+  blockedBy?: (number | null) | User;
   currentSubscription?: (number | null) | Subscription;
   subscriptionStatus?: ('active' | 'trialing' | 'suspended' | 'canceled' | 'expired' | 'restricted') | null;
   stripeCustomerId?: string | null;
@@ -443,6 +473,233 @@ export interface Bid {
   createdAt: string;
 }
 /**
+ * Gestion des catégories d'objets
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categories".
+ */
+export interface Category {
+  id: number;
+  /**
+   * Nom affiché de la catégorie (ex: "Art Contemporain")
+   */
+  name: string;
+  /**
+   * Identifiant unique pour l'URL (ex: "art-contemporain")
+   */
+  slug: string;
+  /**
+   * Description de la catégorie
+   */
+  description?: string | null;
+  /**
+   * Icône de la catégorie (recommandé: SVG ou PNG transparent)
+   */
+  icon?: (number | null) | Media;
+  /**
+   * Image de présentation de la catégorie
+   */
+  image?: (number | null) | Media;
+  /**
+   * Pour créer une hiérarchie de catégories (sous-catégories)
+   */
+  parentCategory?: (number | null) | Category;
+  /**
+   * Ordre d'affichage (0 = premier)
+   */
+  order?: number | null;
+  /**
+   * Désactiver pour masquer la catégorie sans la supprimer
+   */
+  isActive?: boolean | null;
+  /**
+   * Mettre en avant cette catégorie sur la page d'accueil
+   */
+  featuredOnHome?: boolean | null;
+  /**
+   * Définir des commissions particulières pour cette catégorie (sinon, commissions globales)
+   */
+  customCommissions?: {
+    useCustomCommissions?: boolean | null;
+    buyerCommission?: number | null;
+    sellerCommission?: number | null;
+  };
+  /**
+   * Champs spécifiques à demander pour cette catégorie
+   */
+  formCustomization?: {
+    /**
+     * Ajouter des champs spécifiques pour cette catégorie
+     */
+    additionalFields?:
+      | {
+          fieldName: string;
+          fieldLabel: string;
+          fieldType: 'text' | 'number' | 'date' | 'checkbox' | 'select';
+          isRequired?: boolean | null;
+          id?: string | null;
+        }[]
+      | null;
+    requireCertificate?: boolean | null;
+    requireExpertise?: boolean | null;
+  };
+  /**
+   * Nombre total d'objets dans cette catégorie
+   */
+  objectCount?: number | null;
+  /**
+   * Nombre d'enchères en cours dans cette catégorie
+   */
+  activeAuctionsCount?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Paramètres globaux de la plateforme
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "settings".
+ */
+export interface Setting {
+  id: number;
+  /**
+   * Nom du paramètre (ex: "Commissions Plateforme")
+   */
+  label: string;
+  /**
+   * Identifiant technique (ex: "platform_commissions")
+   */
+  key: string;
+  globalCommissions?: {
+    /**
+     * Pourcentage de commission prélevé sur l'acheteur
+     */
+    buyerCommission: number;
+    /**
+     * Pourcentage de commission prélevé sur le vendeur
+     */
+    sellerCommission: number;
+  };
+  /**
+   * Définir des commissions spécifiques par catégorie
+   */
+  categoryCommissions?:
+    | {
+        category: number | Category;
+        buyerCommission: number;
+        sellerCommission: number;
+        id?: string | null;
+      }[]
+    | null;
+  formConfig?: {
+    /**
+     * Liste des champs obligatoires dans le formulaire de dépôt
+     */
+    requiredFields?:
+      | {
+          fieldName: string;
+          id?: string | null;
+        }[]
+      | null;
+    minPhotos?: number | null;
+    maxPhotos?: number | null;
+    enableCertificates?: boolean | null;
+    enableExpertise?: boolean | null;
+  };
+  generalSettings?: {
+    /**
+     * Activer le mode maintenance (site inaccessible sauf pour les admins)
+     */
+    maintenanceMode?: boolean | null;
+    /**
+     * Autoriser les nouvelles inscriptions
+     */
+    registrationEnabled?: boolean | null;
+    auctionEnabled?: boolean | null;
+    quickSaleEnabled?: boolean | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Gestion de la comptabilité et des transactions
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "transactions".
+ */
+export interface Transaction {
+  id: number;
+  /**
+   * Identifiant unique de la transaction
+   */
+  transactionId: string;
+  type: 'sale_payment' | 'platform_commission' | 'seller_payout' | 'subscription' | 'refund' | 'dispute';
+  buyer?: (number | null) | User;
+  seller?: (number | null) | User;
+  user?: (number | null) | User;
+  object?: (number | null) | Object;
+  /**
+   * Montant de la transaction en euros
+   */
+  amount: number;
+  buyerCommission?: number | null;
+  sellerCommission?: number | null;
+  /**
+   * Commission totale prélevée par la plateforme
+   */
+  platformRevenue?: number | null;
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'refunded' | 'canceled';
+  paymentMethod?: ('card' | 'bank_transfer' | 'paypal' | 'stripe') | null;
+  /**
+   * ID Stripe du paiement
+   */
+  stripePaymentIntentId?: string | null;
+  /**
+   * ID Stripe du versement au vendeur
+   */
+  stripeTransferId?: string | null;
+  processedAt?: string | null;
+  completedAt?: string | null;
+  /**
+   * Description détaillée de la transaction
+   */
+  description?: string | null;
+  /**
+   * Notes internes pour l'administration
+   */
+  internalNotes?: string | null;
+  /**
+   * Données techniques supplémentaires (JSON)
+   */
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Numéro de facture généré
+   */
+  invoiceNumber?: string | null;
+  /**
+   * Lien vers la facture PDF
+   */
+  invoiceUrl?: string | null;
+  /**
+   * Année fiscale de la transaction
+   */
+  fiscalYear?: number | null;
+  /**
+   * Transaction rapprochée avec le relevé bancaire
+   */
+  isReconciled?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -497,6 +754,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'bids';
         value: number | Bid;
+      } | null)
+    | ({
+        relationTo: 'categories';
+        value: number | Category;
+      } | null)
+    | ({
+        relationTo: 'settings';
+        value: number | Setting;
+      } | null)
+    | ({
+        relationTo: 'transactions';
+        value: number | Transaction;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -583,6 +852,11 @@ export interface UsersSelect<T extends boolean = true> {
   acceptedGDPR?: T;
   newsletterSubscription?: T;
   accountStatus?: T;
+  isBlocked?: T;
+  blockReason?: T;
+  blockReasonDetails?: T;
+  blockedAt?: T;
+  blockedBy?: T;
   currentSubscription?: T;
   subscriptionStatus?: T;
   stripeCustomerId?: T;
@@ -750,6 +1024,124 @@ export interface BidsSelect<T extends boolean = true> {
   maxAutoBid?: T;
   status?: T;
   notified?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categories_select".
+ */
+export interface CategoriesSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  description?: T;
+  icon?: T;
+  image?: T;
+  parentCategory?: T;
+  order?: T;
+  isActive?: T;
+  featuredOnHome?: T;
+  customCommissions?:
+    | T
+    | {
+        useCustomCommissions?: T;
+        buyerCommission?: T;
+        sellerCommission?: T;
+      };
+  formCustomization?:
+    | T
+    | {
+        additionalFields?:
+          | T
+          | {
+              fieldName?: T;
+              fieldLabel?: T;
+              fieldType?: T;
+              isRequired?: T;
+              id?: T;
+            };
+        requireCertificate?: T;
+        requireExpertise?: T;
+      };
+  objectCount?: T;
+  activeAuctionsCount?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "settings_select".
+ */
+export interface SettingsSelect<T extends boolean = true> {
+  label?: T;
+  key?: T;
+  globalCommissions?:
+    | T
+    | {
+        buyerCommission?: T;
+        sellerCommission?: T;
+      };
+  categoryCommissions?:
+    | T
+    | {
+        category?: T;
+        buyerCommission?: T;
+        sellerCommission?: T;
+        id?: T;
+      };
+  formConfig?:
+    | T
+    | {
+        requiredFields?:
+          | T
+          | {
+              fieldName?: T;
+              id?: T;
+            };
+        minPhotos?: T;
+        maxPhotos?: T;
+        enableCertificates?: T;
+        enableExpertise?: T;
+      };
+  generalSettings?:
+    | T
+    | {
+        maintenanceMode?: T;
+        registrationEnabled?: T;
+        auctionEnabled?: T;
+        quickSaleEnabled?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "transactions_select".
+ */
+export interface TransactionsSelect<T extends boolean = true> {
+  transactionId?: T;
+  type?: T;
+  buyer?: T;
+  seller?: T;
+  user?: T;
+  object?: T;
+  amount?: T;
+  buyerCommission?: T;
+  sellerCommission?: T;
+  platformRevenue?: T;
+  status?: T;
+  paymentMethod?: T;
+  stripePaymentIntentId?: T;
+  stripeTransferId?: T;
+  processedAt?: T;
+  completedAt?: T;
+  description?: T;
+  internalNotes?: T;
+  metadata?: T;
+  invoiceNumber?: T;
+  invoiceUrl?: T;
+  fiscalYear?: T;
+  isReconciled?: T;
   updatedAt?: T;
   createdAt?: T;
 }
