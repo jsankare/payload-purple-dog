@@ -15,6 +15,12 @@ import { Plans } from './collections/Plans'
 import { Subscriptions } from './collections/Subscriptions'
 import { Objects } from './collections/Objects'
 import { Feedback } from './collections/Feedback'
+import { Categories } from './collections/Categories'
+import { Bids } from './collections/Bids'
+import { Offers } from './collections/Offers'
+import { Favorites } from './collections/Favorites'
+import { Transactions } from './collections/Transactions'
+import { Settings } from './globals/Settings'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -27,7 +33,31 @@ export default buildConfig({
     },
     dateFormat: 'd MMMM yyyy, HH:mm',
   },
-  collections: [Users, Media, Plans, Subscriptions, Posts, Objects, Feedback],
+  cors: [
+    'http://localhost:3001',
+    'http://localhost:3000',
+    process.env.NEXT_PUBLIC_FRONTEND_URL || '',
+  ].filter(Boolean),
+  csrf: [
+    'http://localhost:3001',
+    'http://localhost:3000',
+    process.env.NEXT_PUBLIC_FRONTEND_URL || '',
+  ].filter(Boolean),
+  collections: [
+    Users,
+    Media,
+    Plans,
+    Subscriptions,
+    Posts,
+    Objects,
+    Feedback,
+    Categories,
+    Bids,
+    Offers,
+    Favorites,
+    Transactions,
+  ],
+  globals: [Settings],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {

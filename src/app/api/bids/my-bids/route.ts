@@ -1,0 +1,43 @@
+import { NextRequest, NextResponse } from 'next/server'
+import configPromise from '@payload-config'
+import { getPayload } from 'payload'
+
+/**
+ * GET /api/bids/my-bids
+ * 
+ * Get all bids placed by the authenticated user
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const payload = await getPayload({ config: configPromise })
+
+    // Get authenticated user
+    // @ts-ignore - Payload injects user in request context
+    const user = request.user
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // Fetch user's bids
+    const result = await payload.find({
+      collection: 'bids',
+      where: {
+        bidder: { equals: user.id },
+      },
+      sort: '-createdAt',
+      depth: 2, // Include object and bidder details
+    })
+
+    return NextResponse.json(result, { status: 200 })
+  } catch (error) {
+    console.error('Error fetching user bids:', error)
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    )
+  }
+}

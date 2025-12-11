@@ -89,9 +89,9 @@ export async function POST(req: NextRequest) {
 
         if (users.docs.length > 0) {
           const user = users.docs[0]
-          const status = subscription.status === 'active' ? 'active' : 
-                       subscription.status === 'trialing' ? 'trialing' :
-                       subscription.status === 'canceled' ? 'canceled' : 'suspended'
+          const status = subscription.status === 'active' ? 'active' :
+            subscription.status === 'trialing' ? 'trialing' :
+              subscription.status === 'canceled' ? 'canceled' : 'suspended'
 
           await payload.update({
             collection: 'users',
@@ -166,6 +166,64 @@ export async function POST(req: NextRequest) {
           })
 
           console.log(`⚠️ Paiement échoué - compte suspendu pour ${user.email}`)
+        }
+        break
+      }
+
+      case 'payment_intent.succeeded': {
+        const paymentIntent = event.data.object
+        const transactionId = paymentIntent.metadata?.transactionId
+
+        if (transactionId) {
+          try {
+            const transaction = await payload.findByID({
+              collection: 'transactions',
+              id: transactionId,
+            })
+
+            await payload.update({
+              collection: 'transactions',
+              id: transaction.id,
+              data: {
+                paymentStatus: 'held',
+                status: 'payment_held',
+                paymentIntentId: paymentIntent.id,
+                paidAt: new Date().toISOString(),
+              },
+            })
+
+            console.log(`✅ Paiement objet réussi, fonds bloqués pour transaction ${transactionId}`)
+          } catch (error) {
+            console.error(`Erreur lors de la mise à jour de la transaction ${transactionId}:`, error)
+          }
+        }
+        break
+      }
+
+      case 'payment_intent.payment_failed': {
+        const paymentIntent = event.data.object
+        const transactionId = paymentIntent.metadata?.transactionId
+
+        if (transactionId) {
+          try {
+            const transaction = await payload.findByID({
+              collection: 'transactions',
+              id: transactionId,
+            })
+
+            await payload.update({
+              collection: 'transactions',
+              id: transaction.id,
+              data: {
+                status: 'cancelled',
+                paymentStatus: 'pending',
+              },
+            })
+
+            console.log(`⚠️ Paiement objet échoué pour transaction ${transactionId}`)
+          } catch (error) {
+            console.error(`Erreur lors de l'annulation de la transaction ${transactionId}:`, error)
+          }
         }
         break
       }

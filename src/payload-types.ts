@@ -74,6 +74,11 @@ export interface Config {
     posts: Post;
     objects: Object;
     feedback: Feedback;
+    categories: Category;
+    bids: Bid;
+    offers: Offer;
+    favorites: Favorite;
+    transactions: Transaction;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -88,6 +93,11 @@ export interface Config {
     posts: PostsSelect<false> | PostsSelect<true>;
     objects: ObjectsSelect<false> | ObjectsSelect<true>;
     feedback: FeedbackSelect<false> | FeedbackSelect<true>;
+    categories: CategoriesSelect<false> | CategoriesSelect<true>;
+    bids: BidsSelect<false> | BidsSelect<true>;
+    offers: OffersSelect<false> | OffersSelect<true>;
+    favorites: FavoritesSelect<false> | FavoritesSelect<true>;
+    transactions: TransactionsSelect<false> | TransactionsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -97,8 +107,12 @@ export interface Config {
     defaultIDType: number;
   };
   fallbackLocale: null;
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    settings: Setting;
+  };
+  globalsSelect: {
+    settings: SettingsSelect<false> | SettingsSelect<true>;
+  };
   locale: null;
   user: User & {
     collection: 'users';
@@ -186,6 +200,14 @@ export interface User {
   subscriptionStatus?: ('active' | 'trialing' | 'suspended' | 'canceled' | 'expired' | 'restricted') | null;
   stripeCustomerId?: string | null;
   stripeSubscriptionId?: string | null;
+  /**
+   * Computed automatically (pro + active subscription + valid bank details).
+   */
+  canBid?: boolean | null;
+  /**
+   * Computed automatically based on role and validation.
+   */
+  canSell?: boolean | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -325,37 +347,73 @@ export interface Post {
 export interface Object {
   id: number;
   name: string;
-  category:
-    | 'jewelry_watches'
-    | 'antique_furniture'
-    | 'art_paintings'
-    | 'collectibles'
-    | 'fine_wines'
-    | 'instruments'
-    | 'rare_books'
-    | 'classic_cars'
-    | 'luxury_fashion'
-    | 'clocks'
-    | 'vintage_photo'
-    | 'tableware'
-    | 'decorative_art'
-    | 'vintage_vehicles';
+  /**
+   * Category of the object
+   */
+  category: number | Category;
   dimensions: {
     height: number;
     width: number;
     depth: number;
+    weight: number;
   };
-  weight: number;
   description: string;
-  documents?:
-    | {
-        name: string;
-        file: number | Media;
-        description?: string | null;
-        id?: string | null;
-      }[]
-    | null;
+  documents: {
+    name: string;
+    file: number | Media;
+    description?: string | null;
+    id?: string | null;
+  }[];
+  photos: {
+    name: string;
+    image: number | Media;
+    id?: string | null;
+  }[];
   seller?: (number | null) | User;
+  saleMode: 'quick_sale' | 'auction';
+  quickSalePrice?: number | null;
+  auctionStartPrice?: number | null;
+  auctionEndDate?: string | null;
+  status: 'draft' | 'active' | 'sold' | 'expired' | 'removed';
+  /**
+   * Minimum price required for the object to be sold
+   */
+  reservePrice?: number | null;
+  currentBidAmount?: number | null;
+  currentBidder?: (number | null) | User;
+  bidCount?: number | null;
+  viewCount?: number | null;
+  favoriteCount?: number | null;
+  /**
+   * Number of times the auction end was extended by 10 minutes
+   */
+  auctionExtensions?: number | null;
+  publishedAt?: string | null;
+  soldAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categories".
+ */
+export interface Category {
+  id: number;
+  name: string;
+  /**
+   * URL-friendly identifier (auto-generated from name if left empty)
+   */
+  slug: string;
+  description?: string | null;
+  /**
+   * Only active categories are visible in filters
+   */
+  active?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "feedback".
  */
 export interface Feedback {
@@ -378,6 +436,177 @@ export interface Feedback {
   comment?: string | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "bids".
+ */
+export interface Bid {
+  id: number;
+  object: number | Object;
+  /**
+   * Automatically set to current user
+   */
+  bidder: number | User;
+  amount: number;
+  /**
+   * Maximum amount for automatic bidding
+   */
+  maxAutoBidAmount?: number | null;
+  /**
+   * Current status of the bid
+   */
+  status: 'pending' | 'highest' | 'outbid' | 'won' | 'lost' | 'canceled';
+  /**
+   * How the bid was placed
+   */
+  source: 'manual' | 'auto';
+  /**
+   * When the bid was placed
+   */
+  createdAt: string;
+  updatedAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "offers".
+ */
+export interface Offer {
+  id: number;
+  object: number | Object;
+  /**
+   * Automatically set to current user
+   */
+  buyer: number | User;
+  amount: number;
+  /**
+   * Message to the seller (will be filtered for contact information)
+   */
+  message?: string | null;
+  /**
+   * Current status of the offer
+   */
+  status: 'pending' | 'accepted' | 'rejected' | 'expired';
+  /**
+   * When the offer expires
+   */
+  expiresAt?: string | null;
+  /**
+   * When the offer was created
+   */
+  createdAt: string;
+  updatedAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "favorites".
+ */
+export interface Favorite {
+  id: number;
+  /**
+   * Automatically set to current user
+   */
+  user: number | User;
+  object: number | Object;
+  /**
+   * When the favorite was added
+   */
+  createdAt: string;
+  updatedAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "transactions".
+ */
+export interface Transaction {
+  id: number;
+  object: number | Object;
+  buyer: number | User;
+  seller: number | User;
+  /**
+   * Final sale price of the object
+   */
+  finalPrice: number;
+  /**
+   * Commission charged to buyer (from Settings)
+   */
+  buyerCommission: number;
+  /**
+   * Commission deducted from seller (from Settings)
+   */
+  sellerCommission: number;
+  shippingCost?: number | null;
+  /**
+   * Total paid by buyer (finalPrice + buyerCommission + shippingCost)
+   */
+  totalAmount: number;
+  /**
+   * Amount received by seller (finalPrice - sellerCommission)
+   */
+  sellerAmount: number;
+  paymentIntentId?: string | null;
+  checkoutSessionId?: string | null;
+  /**
+   * Stripe payment status
+   */
+  paymentStatus: 'pending' | 'held' | 'released' | 'refunded';
+  /**
+   * Current transaction status
+   */
+  status:
+    | 'payment_pending'
+    | 'payment_held'
+    | 'awaiting_shipping'
+    | 'in_transit'
+    | 'delivered'
+    | 'completed'
+    | 'cancelled'
+    | 'disputed';
+  shippingAddress: {
+    street: string;
+    city: string;
+    postalCode: string;
+    country: string;
+  };
+  billingAddress: {
+    street: string;
+    city: string;
+    postalCode: string;
+    country: string;
+  };
+  /**
+   * Name of the shipping carrier
+   */
+  shippingCarrier?: string | null;
+  /**
+   * Shipping tracking number
+   */
+  trackingNumber?: string | null;
+  /**
+   * When the payment was completed
+   */
+  paidAt?: string | null;
+  /**
+   * When the object was shipped
+   */
+  shippedAt?: string | null;
+  /**
+   * When the object was delivered
+   */
+  deliveredAt?: string | null;
+  /**
+   * When the transaction was completed (funds released)
+   */
+  completedAt?: string | null;
+  /**
+   * Internal notes for administrators
+   */
+  notes?: string | null;
+  /**
+   * When the transaction was created
+   */
+  createdAt: string;
+  updatedAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -426,8 +655,30 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'objects';
         value: number | Object;
+      } | null)
+    | ({
         relationTo: 'feedback';
         value: number | Feedback;
+      } | null)
+    | ({
+        relationTo: 'categories';
+        value: number | Category;
+      } | null)
+    | ({
+        relationTo: 'bids';
+        value: number | Bid;
+      } | null)
+    | ({
+        relationTo: 'offers';
+        value: number | Offer;
+      } | null)
+    | ({
+        relationTo: 'favorites';
+        value: number | Favorite;
+      } | null)
+    | ({
+        relationTo: 'transactions';
+        value: number | Transaction;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -518,6 +769,8 @@ export interface UsersSelect<T extends boolean = true> {
   subscriptionStatus?: T;
   stripeCustomerId?: T;
   stripeSubscriptionId?: T;
+  canBid?: T;
+  canSell?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -618,8 +871,8 @@ export interface ObjectsSelect<T extends boolean = true> {
         height?: T;
         width?: T;
         depth?: T;
+        weight?: T;
       };
-  weight?: T;
   description?: T;
   documents?:
     | T
@@ -629,7 +882,33 @@ export interface ObjectsSelect<T extends boolean = true> {
         description?: T;
         id?: T;
       };
+  photos?:
+    | T
+    | {
+        name?: T;
+        image?: T;
+        id?: T;
+      };
   seller?: T;
+  saleMode?: T;
+  quickSalePrice?: T;
+  auctionStartPrice?: T;
+  auctionEndDate?: T;
+  status?: T;
+  reservePrice?: T;
+  currentBidAmount?: T;
+  currentBidder?: T;
+  bidCount?: T;
+  viewCount?: T;
+  favoriteCount?: T;
+  auctionExtensions?: T;
+  publishedAt?: T;
+  soldAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "feedback_select".
  */
 export interface FeedbackSelect<T extends boolean = true> {
@@ -639,6 +918,100 @@ export interface FeedbackSelect<T extends boolean = true> {
   comment?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categories_select".
+ */
+export interface CategoriesSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  description?: T;
+  active?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "bids_select".
+ */
+export interface BidsSelect<T extends boolean = true> {
+  object?: T;
+  bidder?: T;
+  amount?: T;
+  maxAutoBidAmount?: T;
+  status?: T;
+  source?: T;
+  createdAt?: T;
+  updatedAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "offers_select".
+ */
+export interface OffersSelect<T extends boolean = true> {
+  object?: T;
+  buyer?: T;
+  amount?: T;
+  message?: T;
+  status?: T;
+  expiresAt?: T;
+  createdAt?: T;
+  updatedAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "favorites_select".
+ */
+export interface FavoritesSelect<T extends boolean = true> {
+  user?: T;
+  object?: T;
+  createdAt?: T;
+  updatedAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "transactions_select".
+ */
+export interface TransactionsSelect<T extends boolean = true> {
+  object?: T;
+  buyer?: T;
+  seller?: T;
+  finalPrice?: T;
+  buyerCommission?: T;
+  sellerCommission?: T;
+  shippingCost?: T;
+  totalAmount?: T;
+  sellerAmount?: T;
+  paymentIntentId?: T;
+  checkoutSessionId?: T;
+  paymentStatus?: T;
+  status?: T;
+  shippingAddress?:
+    | T
+    | {
+        street?: T;
+        city?: T;
+        postalCode?: T;
+        country?: T;
+      };
+  billingAddress?:
+    | T
+    | {
+        street?: T;
+        city?: T;
+        postalCode?: T;
+        country?: T;
+      };
+  shippingCarrier?: T;
+  trackingNumber?: T;
+  paidAt?: T;
+  shippedAt?: T;
+  deliveredAt?: T;
+  completedAt?: T;
+  notes?: T;
+  createdAt?: T;
+  updatedAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -679,6 +1052,36 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   batch?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * Paramètres globaux de la plateforme (commissions, etc.)
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "settings".
+ */
+export interface Setting {
+  id: number;
+  /**
+   * Commission percentage added to the final price for buyers (default: 3%)
+   */
+  globalBuyerCommission: number;
+  /**
+   * Commission percentage deducted from the final price for sellers (default: 2%)
+   */
+  globalSellerCommission: number;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "settings_select".
+ */
+export interface SettingsSelect<T extends boolean = true> {
+  globalBuyerCommission?: T;
+  globalSellerCommission?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

@@ -483,6 +483,43 @@ export const Users: CollectionConfig = {
         condition: (data, siblingData, { operation }) => operation === 'update', // Visible uniquement en modification
       },
     },
+
+    // ========== PERMISSIONS CALCULÉES ==========
+    // Permissions calculées (peut enchérir / peut vendre)
+    {
+      name: 'canBid',
+      type: 'checkbox',
+      defaultValue: false,
+      label: {
+        en: 'Can place bids',
+        fr: 'Peut enchérir',
+      },
+      admin: {
+        readOnly: true,
+        position: 'sidebar',
+        description: {
+          en: 'Computed automatically (pro + active subscription + valid bank details).',
+          fr: 'Calculé automatiquement (pro + abonnement actif + coordonnées bancaires valides).',
+        },
+      },
+    },
+    {
+      name: 'canSell',
+      type: 'checkbox',
+      defaultValue: false,
+      label: {
+        en: 'Can sell objects',
+        fr: 'Peut vendre des objets',
+      },
+      admin: {
+        readOnly: true,
+        position: 'sidebar',
+        description: {
+          en: 'Computed automatically based on role and validation.',
+          fr: 'Calculé automatiquement en fonction du rôle et des validations.',
+        },
+      },
+    },
   ],
   hooks: {
     afterChange: [

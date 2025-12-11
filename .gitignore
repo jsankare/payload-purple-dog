@@ -53,3 +53,7 @@ node_modules/
 
 .vscode
 .DS_Store
+
+CLAUDE.md
+.claude
+API_DOCUMENTATION.md

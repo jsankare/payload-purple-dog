@@ -22,25 +22,16 @@ export const Objects: CollectionConfig = {
     // Category
     {
       name: 'category',
-      type: 'select',
-      label: { en: 'Category', fr: 'Categorie' },
+      type: 'relationship',
+      relationTo: 'categories',
       required: true,
-      options: [
-        { label: 'Bijoux & montres', value: 'jewelry_watches' },
-        { label: 'Meubles anciens', value: 'antique_furniture' },
-        { label: 'Objets d’art & tableaux', value: 'art_paintings' },
-        { label: 'Objets de collection (jouets, timbres, monnaies...)', value: 'collectibles' },
-        { label: 'Vins & spiritueux de collection', value: 'fine_wines' },
-        { label: 'Instruments de musique', value: 'instruments' },
-        { label: 'Livres anciens & manuscrits', value: 'rare_books' },
-        { label: 'Véhicules anciens', value: 'classic_cars' },
-        { label: 'Mode & accessoires de luxe (sacs, chaussures, vêtements de marque, etc.)', value: 'luxury_fashion' },
-        { label: 'Horlogerie & pendules anciennes', value: 'clocks' },
-        { label: 'Photographies anciennes & appareils vintage', value: 'vintage_photo' },
-        { label: 'Vaisselle & argenterie & cristallerie', value: 'tableware' },
-        { label: 'Sculptures & objets décoratifs', value: 'decorative_art' },
-        { label: 'Véhicules de collection (auto, moto, nautisme, etc.)', value: 'vintage_vehicles' },
-      ],
+      label: { en: 'Category', fr: 'Catégorie' },
+      admin: {
+        description: {
+          en: 'Category of the object',
+          fr: 'Catégorie de l\'objet',
+        },
+      },
     },
 
     // Dimensions
@@ -97,7 +88,7 @@ export const Objects: CollectionConfig = {
       label: { en: 'Documents', fr: 'Documents' },
       admin: {
         components: {
-          RowLabel: ObjectsRowLabel as any,
+          RowLabel: ObjectsRowLabel,
         },
       },
       required: true,
@@ -136,7 +127,7 @@ export const Objects: CollectionConfig = {
       },
       admin: {
         components: {
-          RowLabel: ObjectsRowLabel as any,
+          RowLabel: ObjectsRowLabel,
         },
       },
       fields: [
@@ -212,13 +203,126 @@ export const Objects: CollectionConfig = {
       },
     },
 
-    // (Optionnel) Prix générique si tu veux le garder pour les deux
-    // {
-    //   name: 'price',
-    //   type: 'number',
-    //   label: { en: 'Price', fr: 'Prix' },
-    //   required: true,
-    // },
+    // Status of the object
+    {
+      name: 'status',
+      type: 'select',
+      required: true,
+      defaultValue: 'draft',
+      label: { en: 'Status', fr: 'Statut' },
+      options: [
+        { label: { en: 'Draft', fr: 'Brouillon' }, value: 'draft' },
+        { label: { en: 'Active', fr: 'En vente' }, value: 'active' },
+        { label: { en: 'Sold', fr: 'Vendu' }, value: 'sold' },
+        { label: { en: 'Expired', fr: 'Expiré' }, value: 'expired' },
+        { label: { en: 'Removed', fr: 'Retiré' }, value: 'removed' },
+      ],
+      admin: {
+        position: 'sidebar',
+      },
+    },
+
+    // Reserve price (auctions only)
+    {
+      name: 'reservePrice',
+      type: 'number',
+      label: { en: 'Reserve price', fr: 'Prix de réserve' },
+      admin: {
+        condition: (_, siblingData) => siblingData?.saleMode === 'auction',
+        description: {
+          en: 'Minimum price required for the object to be sold',
+          fr: 'Prix minimum pour que l\'objet soit vendu',
+        },
+      },
+    },
+
+    // Current auction state
+    {
+      name: 'currentBidAmount',
+      type: 'number',
+      label: { en: 'Current bid amount', fr: 'Enchère actuelle' },
+      admin: {
+        readOnly: true,
+        condition: (_, siblingData) => siblingData?.saleMode === 'auction',
+      },
+    },
+    {
+      name: 'currentBidder',
+      type: 'relationship',
+      relationTo: 'users',
+      label: { en: 'Current highest bidder', fr: 'Enchérisseur actuel' },
+      admin: {
+        readOnly: true,
+        condition: (_, siblingData) => siblingData?.saleMode === 'auction',
+      },
+    },
+    {
+      name: 'bidCount',
+      type: 'number',
+      defaultValue: 0,
+      label: { en: 'Number of bids', fr: 'Nombre d\'enchères' },
+      admin: {
+        readOnly: true,
+      },
+    },
+
+    // Stats
+    {
+      name: 'viewCount',
+      type: 'number',
+      defaultValue: 0,
+      label: { en: 'Number of views', fr: 'Nombre de vues' },
+      admin: {
+        readOnly: true,
+      },
+    },
+    {
+      name: 'favoriteCount',
+      type: 'number',
+      defaultValue: 0,
+      label: { en: 'Number of favorites', fr: 'Nombre de favoris' },
+      admin: {
+        readOnly: true,
+      },
+    },
+    {
+      name: 'auctionExtensions',
+      type: 'number',
+      defaultValue: 0,
+      label: { en: 'Auction extensions', fr: 'Prolongations d\'enchère' },
+      admin: {
+        readOnly: true,
+        condition: (_, siblingData) => siblingData?.saleMode === 'auction',
+        description: {
+          en: 'Number of times the auction end was extended by 10 minutes',
+          fr: 'Nombre de fois que l\'enchère a été prolongée de 10 min',
+        },
+      },
+    },
+
+    // Timeline
+    {
+      name: 'publishedAt',
+      type: 'date',
+      label: { en: 'Published at', fr: 'Date de publication' },
+      admin: {
+        readOnly: true,
+        date: {
+          pickerAppearance: 'dayAndTime',
+        },
+      },
+    },
+    {
+      name: 'soldAt',
+      type: 'date',
+      label: { en: 'Sold at', fr: 'Date de vente' },
+      admin: {
+        readOnly: true,
+        date: {
+          pickerAppearance: 'dayAndTime',
+        },
+      },
+    },
   ],
 
   hooks: {
