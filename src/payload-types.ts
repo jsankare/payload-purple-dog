@@ -382,20 +382,10 @@ export interface Feedback {
 export interface Object {
   id: number;
   name: string;
-  category:
-    | 'bijoux-montres'
-    | 'meubles-anciens'
-    | 'objets-art-tableaux'
-    | 'objets-collection'
-    | 'vins-spiritueux'
-    | 'instruments-musique'
-    | 'livres-manuscrits'
-    | 'mode-luxe'
-    | 'horlogerie-pendules'
-    | 'photographies-vintage'
-    | 'vaisselle-argenterie'
-    | 'sculptures-decoratifs'
-    | 'vehicules-collection';
+  /**
+   * Sélectionner une catégorie depuis la liste (gérée par les admins)
+   */
+  category: number | Category;
   description: string;
   dimensions: {
     length: number;
@@ -447,28 +437,6 @@ export interface Object {
   soldDate?: string | null;
   views?: number | null;
   favorites?: number | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "bids".
- */
-export interface Bid {
-  id: number;
-  object: number | Object;
-  bidder: number | User;
-  amount: number;
-  bidType: 'manual' | 'automatic';
-  /**
-   * Si enchère automatique, montant maximum à enchérir
-   */
-  maxAutoBid?: number | null;
-  status: 'active' | 'outbid' | 'winning' | 'lost';
-  /**
-   * Email de notification envoyé à l'enchérisseur
-   */
-  notified?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -551,6 +519,28 @@ export interface Category {
    * Nombre d'enchères en cours dans cette catégorie
    */
   activeAuctionsCount?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "bids".
+ */
+export interface Bid {
+  id: number;
+  object: number | Object;
+  bidder: number | User;
+  amount: number;
+  bidType: 'manual' | 'automatic';
+  /**
+   * Si enchère automatique, montant maximum à enchérir
+   */
+  maxAutoBid?: number | null;
+  status: 'active' | 'outbid' | 'winning' | 'lost';
+  /**
+   * Email de notification envoyé à l'enchérisseur
+   */
+  notified?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
