@@ -30,17 +30,15 @@ export async function POST(req: NextRequest) {
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object
-        const userId = parseInt(session.metadata?.userId || '0')
-        const planId = parseInt(session.metadata?.planId || '0')
-
+        const session = event.data.object;
+        console.log('[STRIPE][WEBHOOK] Metadata session:', session.metadata);
+        // Abonnement (existant)
+        const userId = parseInt(session.metadata?.userId || '0');
+        const planId = parseInt(session.metadata?.planId || '0');
         if (userId && planId && session.subscription) {
-          // Calculer les dates
-          const now = new Date()
-          const periodEnd = new Date(now)
-          periodEnd.setMonth(periodEnd.getMonth() + 1)
-
-          // Créer ou mettre à jour l'abonnement
+          const now = new Date();
+          const periodEnd = new Date(now);
+          periodEnd.setMonth(periodEnd.getMonth() + 1);
           const subscription = await payload.create({
             collection: 'subscriptions',
             data: {
@@ -54,9 +52,7 @@ export async function POST(req: NextRequest) {
               amount: session.amount_total ? session.amount_total / 100 : 0,
               notes: 'Abonnement activé via Stripe',
             },
-          })
-
-          // Mettre à jour l'utilisateur
+          });
           await payload.update({
             collection: 'users',
             id: userId,
@@ -65,9 +61,31 @@ export async function POST(req: NextRequest) {
               subscriptionStatus: 'active',
               stripeSubscriptionId: session.subscription as string,
             },
-          })
+          });
+          console.log(`✅ Abonnement activé pour l'utilisateur ${userId}`);
+        }
 
-          console.log(`✅ Abonnement activé pour l'utilisateur ${userId}`)
+        // Vente d'objet (nouveau)
+        const objectId = session.metadata?.objectId;
+        const buyerId = session.metadata?.buyerId;
+        const soldPrice = session.amount_total ? session.amount_total / 100 : undefined;
+        const soldDate = new Date().toISOString();
+        if (objectId && buyerId) {
+          try {
+            await payload.update({
+              collection: 'objects',
+              id: objectId,
+              data: {
+                status: 'sold',
+                buyer: buyerId,
+                soldPrice,
+                soldDate,
+              },
+            });
+            console.log(`[STRIPE] Objet ${objectId} marqué comme vendu à ${buyerId}`);
+          } catch (err) {
+            console.error('[STRIPE] Erreur update objet:', err);
+          }
         }
         break
       }
