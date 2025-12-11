@@ -534,6 +534,7 @@ export const Users: CollectionConfig = {
           // Si c'est un professionnel, créer un customer Stripe
           if (doc.role === 'professionnel') {
             // Utiliser setTimeout pour créer le customer après commit de la transaction
+            /*
             setTimeout(async () => {
               try {
                 // Importer le helper Stripe dynamiquement
@@ -560,6 +561,7 @@ export const Users: CollectionConfig = {
                 req.payload.logger.error(`Erreur lors de la création du customer Stripe : ${error}`)
               }
             }, 1000) // Attendre 1 seconde pour que la transaction soit commitée
+            */
           }
 
           // Si c'est un particulier, créer un abonnement gratuit
