@@ -129,15 +129,19 @@ export const Bids: CollectionConfig = {
       async ({ doc, operation, req }) => {
         if (operation === 'create') {
           const payload = req.payload
+          const object = await payload.findByID({
+            collection: 'objects',
+            id: doc.object,
+          })
 
           await payload.update({
             collection: 'objects',
             id: doc.object,
             data: {
-              'auctionConfig.currentBid': doc.amount,
-              'auctionConfig.bidCount': {
-                // @ts-ignore
-                $inc: 1,
+              auctionConfig: {
+                ...object.auctionConfig,
+                currentBid: doc.amount,
+                bidCount: (object.auctionConfig?.bidCount || 0) + 1,
               },
             },
           })
