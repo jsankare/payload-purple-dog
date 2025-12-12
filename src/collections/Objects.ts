@@ -87,11 +87,11 @@ export const Objects: CollectionConfig = {
       type: 'array',
       label: { en: 'Documents', fr: 'Documents' },
       admin: {
-        components: {
+        /* components: {
           RowLabel: ObjectsRowLabel,
-        },
+        }, */
       },
-      required: true,
+      // required: true, // Optional for now
       fields: [
         {
           name: 'name',
@@ -119,16 +119,16 @@ export const Objects: CollectionConfig = {
       name: 'photos',
       type: 'array',
       label: { en: 'Photos', fr: 'Photos' },
-      minRows: 10,
+      minRows: 1,
       required: true,
       labels: {
         singular: { en: 'Photo', fr: 'Photo' },
         plural: { en: 'Photos', fr: 'Photos' },
       },
       admin: {
-        components: {
+        /* components: {
           RowLabel: ObjectsRowLabel,
-        },
+        }, */
       },
       fields: [
         {

@@ -25,6 +25,7 @@ export const Bids: CollectionConfig = {
 
     // Création: uniquement professionnels
     create: ({ req: { user } }) => {
+      console.log('Bid Create Access Check - User:', user?.email, 'Role:', user?.role)
       return user?.role === 'professionnel'
     },
 

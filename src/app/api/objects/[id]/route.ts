@@ -11,10 +11,11 @@ import { getPayload } from 'payload'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
     const payload = await getPayload({ config: configPromise })
+    const params = await props.params
     const { id } = params
 
     // Try to fetch object (findByID throws if not found)
@@ -40,6 +41,7 @@ export async function GET(
       data: {
         viewCount: currentViews + 1,
       },
+      depth: 2,
     })
 
     return NextResponse.json(updated, { status: 200 })

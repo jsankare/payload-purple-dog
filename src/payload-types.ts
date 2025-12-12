@@ -358,12 +358,14 @@ export interface Object {
     weight: number;
   };
   description: string;
-  documents: {
-    name: string;
-    file: number | Media;
-    description?: string | null;
-    id?: string | null;
-  }[];
+  documents?:
+    | {
+        name: string;
+        file: number | Media;
+        description?: string | null;
+        id?: string | null;
+      }[]
+    | null;
   photos: {
     name: string;
     image: number | Media;
@@ -1069,6 +1071,10 @@ export interface Setting {
    * Commission percentage deducted from the final price for sellers (default: 2%)
    */
   globalSellerCommission: number;
+  /**
+   * Default duration in days if not specified (default: 7)
+   */
+  defaultAuctionDuration: number;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -1079,6 +1085,7 @@ export interface Setting {
 export interface SettingsSelect<T extends boolean = true> {
   globalBuyerCommission?: T;
   globalSellerCommission?: T;
+  defaultAuctionDuration?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

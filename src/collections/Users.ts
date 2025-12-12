@@ -41,8 +41,8 @@ export const Users: CollectionConfig = {
     loginWithUsername: false,
     verify: {
       generateEmailHTML: ({ token, user }) => {
-        // URL de validation du compte
-        const url = `${process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000'}/verify?token=${token}`
+        // URL de validation du compte - pointe vers le frontend
+        const url = `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:4000'}/verify?token=${token}`
 
         return `
           <!DOCTYPE html>
@@ -61,7 +61,7 @@ export const Users: CollectionConfig = {
       },
       generateEmailSubject: () => 'Validez votre compte',
     },
-    tokenExpiration: 7200,
+    tokenExpiration: 604800, // 7 jours pour le hackathon
     maxLoginAttempts: 5,
     lockTime: 600000,
   },
@@ -522,50 +522,32 @@ export const Users: CollectionConfig = {
     },
   ],
   hooks: {
+    beforeChange: [
+      async ({ data, operation }) => {
+        // Lors de la création d'un particulier, activer canSell automatiquement
+        if (operation === 'create' && data.role === 'particulier') {
+          data.canSell = true
+        }
+        return data
+      },
+    ],
     afterChange: [
       async ({ doc, operation, req }) => {
-        // Lors de la création d'un compte
-        if (operation === 'create') {
-          // Envoyer l'email de vérification
-          if (!doc._verified) {
-            req.payload.logger.info(`Email de vérification envoyé à ${doc.email}`)
-          }
+        // Architecture propre : On ne fait les opérations lourdes (Stripe, Abonnements)
+        // QUE lors de la création initiale.
+        if (operation !== 'create') {
+          return doc;
+        }
 
-          // Si c'est un professionnel, créer un customer Stripe
-          if (doc.role === 'professionnel') {
-            // Utiliser setTimeout pour créer le customer après commit de la transaction
-            /*
-            setTimeout(async () => {
-              try {
-                // Importer le helper Stripe dynamiquement
-                const { createStripeCustomer } = await import('../lib/stripe')
+        // Envoyer l'email de vérification
+        if (!doc._verified) {
+          req.payload.logger.info(`Email de vérification envoyé à ${doc.email}`)
+        }
 
-                // Créer le customer Stripe
-                const customer = await createStripeCustomer(
-                  doc.email,
-                  `${doc.firstName} ${doc.lastName}`,
-                  doc.id,
-                )
-
-                // Mettre à jour l'utilisateur avec le customer Stripe
-                await req.payload.update({
-                  collection: 'users',
-                  id: doc.id,
-                  data: {
-                    stripeCustomerId: customer.id,
-                  },
-                })
-
-                req.payload.logger.info(`Customer Stripe créé pour ${doc.email}: ${customer.id}`)
-              } catch (error) {
-                req.payload.logger.error(`Erreur lors de la création du customer Stripe : ${error}`)
-              }
-            }, 1000) // Attendre 1 seconde pour que la transaction soit commitée
-            */
-          }
-
-          // Si c'est un particulier, créer un abonnement gratuit
-          if (doc.role === 'particulier') {
+        // Si c'est un particulier, créer un abonnement gratuit
+        if (doc.role === 'particulier') {
+          // Utiliser setTimeout pour créer l'abonnement après commit de la transaction
+          setTimeout(async () => {
             try {
               // Trouver le forfait particulier
               const particulierPlan = await req.payload.find({
@@ -599,6 +581,7 @@ export const Users: CollectionConfig = {
                     amount: 0,
                     notes: 'Forfait gratuit particulier - illimité',
                   },
+                  overrideAccess: true,
                 })
 
                 // Mettre à jour l'utilisateur
@@ -608,7 +591,9 @@ export const Users: CollectionConfig = {
                   data: {
                     currentSubscription: subscription.id,
                     subscriptionStatus: 'active',
+                    canSell: true,
                   },
+                  overrideAccess: true,
                 })
 
                 req.payload.logger.info(`Abonnement gratuit créé pour le particulier ${doc.email}`)
@@ -618,7 +603,7 @@ export const Users: CollectionConfig = {
                 `Erreur lors de la création de l'abonnement particulier : ${error}`,
               )
             }
-          }
+          }, 1000) // Attendre 1 seconde pour que la transaction soit commitée
         }
 
         return doc

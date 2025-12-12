@@ -3,106 +3,9 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 /**
- * GET /api/objects
+ * POST /api/objects/create
  * 
- * List objects with filters
- * 
- * Query params:
- * - page: number (default 1)
- * - limit: number (default 12)
- * - category: category ID (optional)
- * - saleMode: 'quick_sale' | 'auction' (optional)
- * - status: object status (optional, default 'active')
- * - minPrice: number (optional)
- * - maxPrice: number (optional)
- */
-export async function GET(request: NextRequest) {
-  try {
-    const payload = await getPayload({ config: configPromise })
-
-    // Parse query parameters
-    const { searchParams } = new URL(request.url)
-    const page = Number(searchParams.get('page')) || 1
-    const limit = Number(searchParams.get('limit')) || 12
-    const category = searchParams.get('category')
-    const saleMode = searchParams.get('saleMode')
-    const status = searchParams.get('status') || 'active'
-    const minPrice = searchParams.get('minPrice')
-    const maxPrice = searchParams.get('maxPrice')
-
-    // Build where clause
-    const where: any = {}
-
-    // Filter by status (default to 'active')
-    if (status) {
-      where.status = { equals: status }
-    }
-
-    // Filter by category
-    if (category) {
-      where.category = { equals: category }
-    }
-
-    // Filter by sale mode
-    if (saleMode) {
-      where.saleMode = { equals: saleMode }
-    }
-
-    // Filter by price range
-    if (minPrice || maxPrice) {
-      if (saleMode === 'quick_sale') {
-        // Filter on quickSalePrice for quick sales
-        where.quickSalePrice = {}
-        if (minPrice) {
-          where.quickSalePrice.greater_than_equal = Number(minPrice)
-        }
-        if (maxPrice) {
-          where.quickSalePrice.less_than_equal = Number(maxPrice)
-        }
-      } else if (saleMode === 'auction') {
-        // Filter on auctionStartPrice for auctions
-        where.auctionStartPrice = {}
-        if (minPrice) {
-          where.auctionStartPrice.greater_than_equal = Number(minPrice)
-        }
-        if (maxPrice) {
-          where.auctionStartPrice.less_than_equal = Number(maxPrice)
-        }
-      } else {
-        // If saleMode not specified, filter on quickSalePrice by default
-        where.quickSalePrice = {}
-        if (minPrice) {
-          where.quickSalePrice.greater_than_equal = Number(minPrice)
-        }
-        if (maxPrice) {
-          where.quickSalePrice.less_than_equal = Number(maxPrice)
-        }
-      }
-    }
-
-    // Fetch objects
-    const result = await payload.find({
-      collection: 'objects',
-      page,
-      limit,
-      where,
-      sort: '-publishedAt',
-    })
-
-    return NextResponse.json(result, { status: 200 })
-  } catch (error) {
-    console.error('Error fetching objects:', error)
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    )
-  }
-}
-
-/**
- * POST /api/objects
- *
- * Create a new object (redirects to /create for full implementation)
+ * Create a new object from frontend
  * Requires authentication
  */
 export async function POST(request: NextRequest) {
@@ -150,11 +53,6 @@ export async function POST(request: NextRequest) {
       if (body.dimensions) {
         data.dimensions = body.dimensions
       }
-
-      // Handle photos from request
-      if (body.photos && Array.isArray(body.photos)) {
-        data.photos = body.photos
-      }
     } else {
       // Parse FormData
       const formData = await request.formData()
@@ -190,13 +88,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Required fields with defaults if not present
-    if (!data.photos) data.photos = []
-    data.documents = []
+    // Required fields with defaults
+    data.photos = [] // Empty array for now (images upload to be implemented)
+    data.documents = [] // Empty array for now
     data.bidCount = 0
     data.viewCount = 0
     data.favoriteCount = 0
     data.auctionExtensions = 0
+
+    // Debug log
+    console.log('Creating object with data:', JSON.stringify(data, null, 2))
 
     // Create the object
     const result = await payload.create({

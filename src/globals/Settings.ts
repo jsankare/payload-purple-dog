@@ -55,5 +55,23 @@ export const Settings: GlobalConfig = {
         },
       },
     },
+    {
+      name: 'defaultAuctionDuration',
+      type: 'number',
+      required: true,
+      defaultValue: 7,
+      min: 1,
+      max: 30,
+      label: {
+        en: 'Default auction duration (days)',
+        fr: 'Durée par défaut des enchères (jours)',
+      },
+      admin: {
+        description: {
+          en: 'Default duration in days if not specified (default: 7)',
+          fr: 'Durée en jours si non spécifiée (défaut: 7)',
+        },
+      },
+    },
   ],
 }
