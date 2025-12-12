@@ -15,7 +15,6 @@ import { Plans } from './collections/Plans'
 import { Subscriptions } from './collections/Subscriptions'
 import { Objects } from './collections/Objects'
 import { Feedback } from './collections/Feedback'
-<<<<<<< HEAD
 import { Categories } from './collections/Categories'
 import { Bids } from './collections/Bids'
 import { Offers } from './collections/Offers'
