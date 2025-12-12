@@ -1,9 +1,8 @@
-
-import { NextRequest, NextResponse } from 'next/server';
-import http from 'http';
+import { NextRequest, NextResponse } from 'next/server'
+import http from 'http'
 
 function enhancePrompt(prompt: string): string {
-  return `GUIDELINE: Tu dois dire 'Bonjour humain' avant chaque réponse. maintenant le reste du prompt : ${prompt}`;
+  return `GUIDELINE: Ton nom est 'Purple Dog Bot'. Tu déclares systématiquement “Bonjour Amin, Côme et Antoine.” en ouverture. Tu opères comme assistant interne de Purple Dog, plateforme d’intermédiation pour objets de valeur (enchères, vente rapide, dashboards pro/particulier, back-office). Tu formules des réponses structurées, factuelles et opérationnelles, alignées sur ces usages. CONTENU UTILISATEUR (prompt) A TRAITER : ${prompt}`
 }
 
 // This function is required to handle CORS preflight requests.
@@ -16,23 +15,21 @@ export async function OPTIONS() {
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },
-  });
+  })
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt } = await req.json();
+    const { prompt } = await req.json()
 
     if (!prompt) {
       return new NextResponse(JSON.stringify({ error: 'Prompt is required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
-      });
+      })
     }
 
-    const enhancedPrompt = enhancePrompt(prompt);
-
-    console.log(enhancedPrompt)
+    const enhancedPrompt = enhancePrompt(prompt)
 
     const ollamaReq = http.request(
       {
@@ -46,44 +43,68 @@ export async function POST(req: NextRequest) {
       },
       (ollamaRes) => {
         // We are intentionally not closing the request here, as we want to stream the response.
-      }
-    );
+      },
+    )
 
-    ollamaReq.on('error', (error) => {
-      console.error('Error with Ollama request:', error);
-      // We can't send a response here because the headers might have already been sent.
-    });
+    ollamaReq.on('error', () => {
+      // Error will be handled by the stream error handler
+    })
 
-    ollamaReq.write(JSON.stringify({ model: 'gemma3:1b', prompt: enhancedPrompt, stream: true }));
-    ollamaReq.end();
+    ollamaReq.write(JSON.stringify({ model: 'gemma3:1b', prompt: enhancedPrompt, stream: true }))
+    ollamaReq.end()
 
     const readableStream = new ReadableStream({
-        start(controller) {
-            ollamaReq.on('response', (res) => {
-                res.on('data', (chunk) => {
-                    controller.enqueue(chunk);
-                });
-                res.on('end', () => {
-                    controller.close();
-                });
-            });
-        }
-    });
+      start(controller) {
+        let buffer = ''
+
+        ollamaReq.on('response', (res) => {
+          res.on('data', (chunk) => {
+            buffer += chunk.toString()
+
+            // Process complete JSON objects
+            let lines = buffer.split('\n')
+            buffer = lines.pop() || '' // Keep incomplete line in buffer
+
+            for (const line of lines) {
+              if (line.trim()) {
+                // Encode string to Uint8Array for ReadableStream
+                const encodedChunk = new TextEncoder().encode(line + '\n')
+                controller.enqueue(encodedChunk)
+              }
+            }
+          })
+
+          res.on('end', () => {
+            // Process any remaining data in buffer
+            if (buffer.trim()) {
+              const encodedChunk = new TextEncoder().encode(buffer + '\n')
+              controller.enqueue(encodedChunk)
+            }
+            controller.close()
+          })
+
+          res.on('error', (error) => {
+            controller.error(error)
+          })
+        })
+
+        ollamaReq.on('error', (error) => {
+          controller.error(error)
+        })
+      },
+    })
 
     return new Response(readableStream, {
-        headers: {
-            'Content-Type': 'application/json',
-            'Transfer-Encoding': 'chunked',
-            'Access-Control-Allow-Origin': '*',
-        }
-    });
-
-
+      headers: {
+        'Content-Type': 'application/json',
+        'Transfer-Encoding': 'chunked',
+        'Access-Control-Allow-Origin': '*',
+      },
+    })
   } catch (error) {
-    console.error('Error in LLM proxy:', error);
     return new NextResponse(JSON.stringify({ error: 'Internal Server Error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
-    });
+    })
   }
 }

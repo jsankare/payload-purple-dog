@@ -1,29 +1,56 @@
 services:
   payload:
-    image: node:18-alpine
+    build:
+      context: ./payload-purple-dog
     ports:
-      - '3000:3000'
+      - "3000:3000"
     volumes:
-      - .:/home/node/app
-      - node_modules:/home/node/app/node_modules
-    working_dir: /home/node/app/
-    command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm dev"
+      - ./payload-purple-dog:/app
+    working_dir: /app
     depends_on:
       - postgres
     env_file:
-      - .env
+      - ./payload-purple-dog/.env
+    command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm dev"
+
+  front:
+    build:
+      context: ./purple-dog-front
+    ports:
+      - "4000:3000"
+    volumes:
+      - ./purple-dog-front:/app
+    working_dir: /app
+    env_file:
+      - ./purple-dog-front/.env
+    command: sh -c "npm install && npm run dev"
+    depends_on:
+      - payload
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 8G
 
   postgres:
-    restart: always
     image: postgres:latest
+    restart: always
     volumes:
       - pgdata:/var/lib/postgresql
     ports:
       - "5432:5432"
     env_file:
-      - .env
+      - ./payload-purple-dog/.env
 
 volumes:
-  data:
+  ollama_models:
   pgdata:
-  node_modules:
