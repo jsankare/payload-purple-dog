@@ -10,11 +10,7 @@ import config from '@/payload.config'
  */
 export async function PUT(
   req: NextRequest,
-<<<<<<< HEAD
   { params }: { params: Promise<{ id: string }> }
-=======
-  props: { params: Promise<{ id: string }> }
->>>>>>> origin/develop
 ) {
   try {
     const params = await props.params
@@ -124,11 +120,7 @@ export async function PUT(
  */
 export async function DELETE(
   req: NextRequest,
-<<<<<<< HEAD
   { params }: { params: Promise<{ id: string }> }
-=======
-  props: { params: Promise<{ id: string }> }
->>>>>>> origin/develop
 ) {
   try {
     const params = await props.params
