@@ -1,17 +1,21 @@
+/**
+ * POST /api/stripe/create-subscription
+ * Creates Stripe subscription for professional users
+ */
+
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-12-18.acacia', // Utiliser une version récente ou celle par défaut
+  apiVersion: '2025-11-17.clover',
 })
 
 export async function POST(request: NextRequest) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Vérifier l'authentification
     const { user } = await payload.auth(request)
 
     if (!user) {
@@ -28,7 +32,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Price ID is required' }, { status: 400 })
     }
 
-    // 1. Récupérer ou créer le client Stripe
+    /** Get or create Stripe customer */
     let customerId = user.stripeCustomerId
 
     if (!customerId) {
@@ -41,7 +45,6 @@ export async function POST(request: NextRequest) {
       })
       customerId = customer.id
 
-      // Sauvegarder le customer ID
       await payload.update({
         collection: 'users',
         id: user.id,
@@ -51,7 +54,6 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // 2. Créer l'abonnement
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],
@@ -63,8 +65,8 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    const invoice = subscription.latest_invoice as Stripe.Invoice
-    const paymentIntent = invoice.payment_intent as Stripe.PaymentIntent
+    const invoice = subscription.latest_invoice as Stripe.Response<Stripe.Invoice> & { payment_intent: Stripe.PaymentIntent }
+    const paymentIntent = invoice.payment_intent
 
     if (!paymentIntent?.client_secret) {
       throw new Error('Failed to create payment intent')

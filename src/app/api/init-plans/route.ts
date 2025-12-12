@@ -2,11 +2,17 @@ import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 
+/**
+ * POST /api/init-plans
+ * Initialize subscription plans (Particulier & Professionnel)
+ * 
+ * GET /api/init-plans
+ * List all subscription plans
+ */
 export async function POST() {
   try {
     const payload = await getPayload({ config })
 
-    // Vérifier si les forfaits existent déjà
     const existingPlans = await payload.find({
       collection: 'plans',
       limit: 1,
@@ -14,12 +20,11 @@ export async function POST() {
 
     if (existingPlans.totalDocs > 0) {
       return NextResponse.json({
-        message: 'Les forfaits sont déjà initialisés',
+        message: 'Plans already initialized',
         count: existingPlans.totalDocs,
       })
     }
 
-    // Créer le forfait Particulier (gratuit)
     const particulierPlan = await payload.create({
       collection: 'plans',
       data: {
@@ -30,18 +35,15 @@ export async function POST() {
         trialPeriodDays: 0,
         description: 'Forfait gratuit pour les particuliers. Accès illimité à la plateforme pour acheter et vendre vos objets de valeur.',
         features: [
-          { feature: 'Accès illimité à la plateforme' },
+          { feature: 'Accès limité à la plateforme' },
           { feature: 'Publication d\'annonces' },
-          { feature: 'Participation aux enchères' },
-          { feature: 'Messagerie intégrée' },
-          { feature: 'Protection des acheteurs' },
+          { feature: 'Protection des venduers' },
         ],
         isActive: true,
         isDefault: true,
       },
     })
 
-    // Créer le forfait Professionnel (49€/mois avec 1 mois d'essai)
     const professionnelPlan = await payload.create({
       collection: 'plans',
       data: {
@@ -55,6 +57,7 @@ export async function POST() {
           { feature: 'Accès illimité à la plateforme' },
           { feature: 'Publication illimitée d\'annonces' },
           { feature: 'Enchères illimitées' },
+          { feature: 'Protection des acheteurs' },
         ],
         isActive: true,
         isDefault: true,
@@ -62,7 +65,7 @@ export async function POST() {
     })
 
     return NextResponse.json({
-      message: 'Forfaits initialisés avec succès',
+      message: 'Plans initialized successfully',
       plans: {
         particulier: particulierPlan,
         professionnel: professionnelPlan,
@@ -70,9 +73,9 @@ export async function POST() {
     }, { status: 201 })
 
   } catch (error: any) {
-    console.error('Erreur lors de l\'initialisation des forfaits:', error)
+    console.error('Error initializing plans:', error)
     return NextResponse.json({
-      error: 'Erreur lors de l\'initialisation des forfaits',
+      error: 'Failed to initialize plans',
       details: error.message,
     }, { status: 500 })
   }
@@ -88,14 +91,14 @@ export async function GET() {
     })
 
     return NextResponse.json({
-      message: 'Liste des forfaits',
+      message: 'Plans list',
       plans: plans.docs,
       total: plans.totalDocs,
     })
 
   } catch (error: any) {
     return NextResponse.json({
-      error: 'Erreur lors de la récupération des forfaits',
+      error: 'Failed to fetch plans',
       details: error.message,
     }, { status: 500 })
   }

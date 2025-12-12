@@ -4,9 +4,7 @@ import { getPayload } from 'payload'
 
 /**
  * GET /api/objects/[id]
- * 
  * Get object details and increment view count
- * 
  * @param params.id - Object ID
  */
 export async function GET(
@@ -18,7 +16,6 @@ export async function GET(
     const params = await props.params
     const { id } = params
 
-    // Try to fetch object (findByID throws if not found)
     let object
     try {
       object = await payload.findByID({
@@ -26,14 +23,12 @@ export async function GET(
         id,
       })
     } catch (error) {
-      // Object not found
       return NextResponse.json(
         { error: 'Not found' },
         { status: 404 }
       )
     }
 
-    // Increment view count
     const currentViews = typeof object.viewCount === 'number' ? object.viewCount : 0
     const updated = await payload.update({
       collection: 'objects',
@@ -42,7 +37,7 @@ export async function GET(
         viewCount: currentViews + 1,
       },
       depth: 2,
-      overrideAccess: true, // Skip validation for existing objects
+      overrideAccess: true,
     })
 
     return NextResponse.json(updated, { status: 200 })

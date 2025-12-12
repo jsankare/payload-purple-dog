@@ -5,20 +5,16 @@ import { isValidBid, shouldExtendAuction, extendAuction } from '@/lib/auction'
 
 /**
  * POST /api/bids
- * 
- * Place a bid on an auction object
- * 
- * Body:
- * - objectId: string
- * - amount: number
- * - isAutoBid?: boolean (default: false)
- * - maxAutoBidAmount?: number
+ * Places bid on auction object (professionals only, requires payment method)
+ * @param objectId - Object ID to bid on
+ * @param amount - Bid amount
+ * @param isAutoBid - Enable auto-bidding (optional)
+ * @param maxAutoBidAmount - Max amount for auto-bidding (optional)
  */
 export async function POST(request: NextRequest) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Get authenticated user using Payload auth
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -28,7 +24,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify user has permission to bid (professionals only)
     if (user.role !== 'professionnel') {
       return NextResponse.json(
         { error: 'Only professionals can place bids' },
@@ -36,7 +31,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 🚨 CRITICAL: Verify user has valid payment method before bidding
+    /** CRITICAL: Verify user has valid payment method before bidding */
     if (!user.hasValidPaymentMethod) {
       return NextResponse.json(
         {
@@ -48,11 +43,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Parse request body
     const body = await request.json()
     const { objectId, amount, isAutoBid = false, maxAutoBidAmount } = body
 
-    // Validate input
     if (!objectId || !amount) {
       return NextResponse.json(
         { error: 'objectId and amount are required' },
@@ -67,7 +60,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Fetch object
     let object
     try {
       object = await payload.findByID({
@@ -81,7 +73,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate object is an auction
     if (object.saleMode !== 'auction') {
       return NextResponse.json(
         { error: 'This object is not in auction mode' },
@@ -89,7 +80,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate object is active
     if (object.status !== 'active') {
       return NextResponse.json(
         { error: 'This auction is not active' },
@@ -97,7 +87,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate auction is not ended
     const now = new Date()
     const auctionEndDate = new Date(object.auctionEndDate)
 
@@ -108,12 +97,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Determine current bid amount
     const currentBid = typeof object.currentBidAmount === 'number'
       ? object.currentBidAmount
       : object.auctionStartPrice
 
-    // Validate bid amount using auction helper
     const validation = isValidBid(amount, currentBid, object.reservePrice)
 
     if (!validation.valid) {
@@ -123,7 +110,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create bid
     const bid = await payload.create({
       collection: 'bids',
       data: {
@@ -134,14 +120,12 @@ export async function POST(request: NextRequest) {
         source: isAutoBid ? 'auto' : 'manual',
         maxAutoBidAmount: isAutoBid ? maxAutoBidAmount : undefined,
       },
-      overrideAccess: true, // Bypass access control (already verified user is professionnel above)
+      overrideAccess: true,
     })
 
-    // Check if auction should be extended
     const shouldExtend = shouldExtendAuction(auctionEndDate)
     const newEndDate = shouldExtend ? extendAuction(auctionEndDate) : auctionEndDate
 
-    // Update object
     const updatedObject = await payload.update({
       collection: 'objects',
       id: object.id,
@@ -154,15 +138,14 @@ export async function POST(request: NextRequest) {
           ? (object.auctionExtensions || 0) + 1
           : object.auctionExtensions,
       },
-      overrideAccess: true, // Bypass access control
+      overrideAccess: true,
     })
 
-    // Send email notification to previous bidder (if exists)
+    /** Notify previous bidder they were outbid */
     if (object.currentBidder && object.currentBidder !== user.id) {
       try {
         const { auctionOutbidTemplate, sendEmail } = await import('@/lib/email/templates')
 
-        // Extract previous bidder ID (can be string or object)
         const previousBidderId = typeof object.currentBidder === 'string'
           ? object.currentBidder
           : object.currentBidder?.id
@@ -184,11 +167,10 @@ export async function POST(request: NextRequest) {
         }
       } catch (emailError) {
         console.error('Error sending outbid email:', emailError)
-        // Don't fail the bid if email fails
       }
     }
 
-    // Send email notification to seller about new bid
+    /** Notify seller about new bid */
     try {
       const { newBidTemplate, sendEmail } = await import('@/lib/email/templates')
 
@@ -205,14 +187,13 @@ export async function POST(request: NextRequest) {
           objectName: object.name,
           objectUrl: `${appUrl}/objets/${object.id}`,
           bidAmount: amount,
-          bidderName: user.firstName, // Only first name for privacy
+          bidderName: user.firstName,
           sellerName: seller.firstName,
         })
         await sendEmail(seller.email, 'Nouvelle enchère sur votre objet !', html)
       }
     } catch (emailError) {
       console.error('Error sending seller notification email:', emailError)
-      // Don't fail the bid if email fails
     }
 
     return NextResponse.json(

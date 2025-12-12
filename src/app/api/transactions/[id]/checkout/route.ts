@@ -5,9 +5,7 @@ import { createObjectCheckoutSession } from '@/lib/stripe'
 
 /**
  * POST /api/transactions/[id]/checkout
- * 
  * Create Stripe Checkout Session for a transaction
- * 
  * @param params.id - Transaction ID
  */
 export async function POST(
@@ -18,7 +16,6 @@ export async function POST(
     const payload = await getPayload({ config: configPromise })
     const { id } = await params
 
-    // Get authenticated user using Payload auth
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -28,7 +25,6 @@ export async function POST(
       )
     }
 
-    // Fetch transaction
     let transaction
     try {
       transaction = await payload.findByID({
@@ -42,7 +38,6 @@ export async function POST(
       )
     }
 
-    // Verify user is the buyer or admin
     const buyerId = typeof transaction.buyer === 'string'
       ? transaction.buyer
       : transaction.buyer?.id
@@ -54,7 +49,6 @@ export async function POST(
       )
     }
 
-    // Validate transaction status
     if (transaction.status !== 'payment_pending') {
       return NextResponse.json(
         { error: 'This transaction is not pending payment' },
@@ -69,7 +63,6 @@ export async function POST(
       )
     }
 
-    // Get buyer details for Stripe customer ID
     const buyer = await payload.findByID({
       collection: 'users',
       id: buyerId,
@@ -82,10 +75,8 @@ export async function POST(
       )
     }
 
-    // Calculate amount in cents
     const amountInCents = Math.round(transaction.totalAmount * 100)
 
-    // Get object and seller IDs
     const objectId = typeof transaction.object === 'string'
       ? transaction.object
       : transaction.object?.id
@@ -94,7 +85,6 @@ export async function POST(
       ? transaction.seller
       : transaction.seller?.id
 
-    // Create Stripe Checkout Session
     const session = await createObjectCheckoutSession(
       buyer.stripeCustomerId,
       transaction.id,
@@ -105,10 +95,9 @@ export async function POST(
         sellerId,
         buyerId,
       },
-      buyer.stripePaymentMethodId // Pass saved payment method
+      buyer.stripePaymentMethodId
     )
 
-    // Update transaction with checkout session ID
     await payload.update({
       collection: 'transactions',
       id: transaction.id,

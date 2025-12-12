@@ -4,14 +4,12 @@ import { getPayload } from 'payload'
 
 /**
  * GET /api/favorites
- * 
- * Get all favorites for the authenticated user
+ * Returns all favorites for authenticated user
  */
 export async function GET(request: NextRequest) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Get authenticated user from request headers
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -21,7 +19,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Fetch user's favorites
     const result = await payload.find({
       collection: 'favorites',
       where: {
@@ -29,7 +26,7 @@ export async function GET(request: NextRequest) {
           equals: user.id,
         },
       },
-      depth: 1, // Include object details
+      depth: 1,
       sort: '-createdAt',
     })
 
@@ -45,18 +42,13 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/favorites
- * 
- * Toggle favorite (add or remove)
- * Updates favoriteCount on the object
- * 
- * Body:
- * - objectId: string
+ * Toggle favorite (add/remove) and update object favoriteCount
+ * @param objectId - Object ID to favorite/unfavorite
  */
 export async function POST(request: NextRequest) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Get authenticated user from request headers
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -66,7 +58,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Parse request body
     const body = await request.json()
     const { objectId } = body
 
@@ -77,7 +68,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if favorite already exists
     const existing = await payload.find({
       collection: 'favorites',
       where: {
@@ -92,19 +82,15 @@ export async function POST(request: NextRequest) {
     const favorite = existing.docs[0]
     let createdFavorite = null
 
-    // Convert objectId to number (comes from frontend as string)
     const objectIdNum = typeof objectId === 'string' ? parseInt(objectId, 10) : objectId
     const userIdNum = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id
 
-    // Toggle favorite
     if (favorite) {
-      // Remove favorite
       await payload.delete({
         collection: 'favorites',
         id: favorite.id,
       })
     } else {
-      // Add favorite
       createdFavorite = await payload.create({
         collection: 'favorites',
         data: {
@@ -114,7 +100,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Update favoriteCount on object
+    /** Update favoriteCount on object */
     try {
       const object = await payload.findByID({
         collection: 'objects',
@@ -126,8 +112,8 @@ export async function POST(request: NextRequest) {
         : 0
 
       const newCount = favorite
-        ? Math.max(0, currentCount - 1) // Decrement (remove)
-        : currentCount + 1 // Increment (add)
+        ? Math.max(0, currentCount - 1)
+        : currentCount + 1
 
       await payload.update({
         collection: 'objects',
@@ -137,13 +123,12 @@ export async function POST(request: NextRequest) {
         },
       })
     } catch (objectError) {
-      // Log error but don't fail the request
       console.error('Error updating object favoriteCount:', objectError)
     }
 
     return NextResponse.json(
       {
-        isFavorite: !favorite, // true if added, false if removed
+        isFavorite: !favorite,
         favorite: createdFavorite || null,
       },
       { status: 200 }

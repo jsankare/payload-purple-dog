@@ -4,9 +4,7 @@ import { getPayload } from 'payload'
 
 /**
  * GET /api/objects
- * 
  * List objects with filters
- * 
  * Query params:
  * - page: number (default 1)
  * - limit: number (default 12)
@@ -20,7 +18,6 @@ export async function GET(request: NextRequest) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Parse query parameters
     const { searchParams } = new URL(request.url)
     const page = Number(searchParams.get('page')) || 1
     const limit = Number(searchParams.get('limit')) || 12
@@ -30,28 +27,22 @@ export async function GET(request: NextRequest) {
     const minPrice = searchParams.get('minPrice')
     const maxPrice = searchParams.get('maxPrice')
 
-    // Build where clause
     const where: any = {}
 
-    // Filter by status (default to 'active')
     if (status) {
       where.status = { equals: status }
     }
 
-    // Filter by category
     if (category) {
       where.category = { equals: category }
     }
 
-    // Filter by sale mode
     if (saleMode) {
       where.saleMode = { equals: saleMode }
     }
 
-    // Filter by price range
     if (minPrice || maxPrice) {
       if (saleMode === 'quick_sale') {
-        // Filter on quickSalePrice for quick sales
         where.quickSalePrice = {}
         if (minPrice) {
           where.quickSalePrice.greater_than_equal = Number(minPrice)
@@ -60,7 +51,6 @@ export async function GET(request: NextRequest) {
           where.quickSalePrice.less_than_equal = Number(maxPrice)
         }
       } else if (saleMode === 'auction') {
-        // Filter on auctionStartPrice for auctions
         where.auctionStartPrice = {}
         if (minPrice) {
           where.auctionStartPrice.greater_than_equal = Number(minPrice)
@@ -69,7 +59,6 @@ export async function GET(request: NextRequest) {
           where.auctionStartPrice.less_than_equal = Number(maxPrice)
         }
       } else {
-        // If saleMode not specified, filter on quickSalePrice by default
         where.quickSalePrice = {}
         if (minPrice) {
           where.quickSalePrice.greater_than_equal = Number(minPrice)
@@ -80,7 +69,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Fetch objects
     const result = await payload.find({
       collection: 'objects',
       page,
@@ -101,7 +89,6 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/objects
- *
  * Create a new object (redirects to /create for full implementation)
  * Requires authentication
  */
@@ -109,7 +96,6 @@ export async function POST(request: NextRequest) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Get authenticated user from request
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -119,14 +105,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Detect Content-Type and parse accordingly
     const contentType = request.headers.get('content-type') || ''
     let data: any = {
-      seller: user.id, // Assign authenticated user as seller
+      seller: user.id,
     }
 
     if (contentType.includes('application/json')) {
-      // Parse JSON body
       const body = await request.json()
 
       data.name = body.name
@@ -151,12 +135,10 @@ export async function POST(request: NextRequest) {
         data.dimensions = body.dimensions
       }
 
-      // Handle photos from request
       if (body.photos && Array.isArray(body.photos)) {
         data.photos = body.photos
       }
     } else {
-      // Parse FormData
       const formData = await request.formData()
 
       data.name = formData.get('name')
@@ -190,7 +172,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Required fields with defaults if not present
     if (!data.photos) data.photos = []
     data.documents = []
     data.bidCount = 0
@@ -198,7 +179,6 @@ export async function POST(request: NextRequest) {
     data.favoriteCount = 0
     data.auctionExtensions = 0
 
-    // Create the object
     const result = await payload.create({
       collection: 'objects',
       data,

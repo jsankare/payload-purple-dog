@@ -1,20 +1,18 @@
+/**
+ * POST /api/stripe/setup-intent
+ * Create Setup Intent for adding payment method (professionals only)
+ * Automatically creates Stripe customer if missing
+ */
+
 import { stripe, createStripeCustomer } from '@/lib/stripe'
 import { NextRequest, NextResponse } from 'next/server'
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
-/**
- * POST /api/stripe/setup-intent
- * 
- * Create a Setup Intent for adding a payment method
- * Required for professionals to bid on auctions
- * Automatically creates Stripe customer if missing
- */
 export async function POST(request: NextRequest) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Get authenticated user
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -24,7 +22,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Only professionals need payment methods to bid
     if (user.role !== 'professionnel') {
       return NextResponse.json(
         { error: 'Only professionals can add payment methods' },
@@ -32,13 +29,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user has Stripe customer ID, create if missing
     let customerId = user.stripeCustomerId
 
     if (!customerId) {
       console.log('Creating Stripe customer for user:', user.email)
 
-      // Create Stripe customer automatically
       const customer = await createStripeCustomer(
         user.email,
         `${user.firstName} ${user.lastName}`,
@@ -47,7 +42,6 @@ export async function POST(request: NextRequest) {
 
       console.log('Stripe customer created:', customer.id)
 
-      // Update user with Stripe customer ID
       await payload.update({
         collection: 'users',
         id: user.id,
@@ -60,7 +54,6 @@ export async function POST(request: NextRequest) {
       customerId = customer.id
     }
 
-    // Create Setup Intent
     const setupIntent = await stripe.setupIntents.create({
       customer: customerId,
       payment_method_types: ['card'],

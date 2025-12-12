@@ -3,30 +3,27 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 
 /**
- * Route pour récupérer le profil complet de l'utilisateur connecté
  * GET /api/profile
+ * Returns full profile of authenticated user
  */
 export async function GET(req: NextRequest) {
   try {
     const payload = await getPayload({ config })
-    
-    // Vérifier l'authentification
+
     const { user } = await payload.auth({ headers: req.headers })
-    
+
     if (!user) {
       return NextResponse.json(
-        { error: 'Non authentifié' },
+        { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    // Récupérer le profil complet
     const fullUser = await payload.findByID({
       collection: 'users',
       id: user.id,
     })
 
-    // Préparer la réponse selon le rôle
     const profileData: any = {
       id: fullUser.id,
       email: fullUser.email,
@@ -42,7 +39,6 @@ export async function GET(req: NextRequest) {
       updatedAt: fullUser.updatedAt,
     }
 
-    // Ajouter les champs spécifiques selon le rôle
     if (fullUser.role === 'particulier') {
       profileData.isOver18 = fullUser.isOver18
     }
@@ -55,19 +51,15 @@ export async function GET(req: NextRequest) {
       profileData.socialMedia = fullUser.socialMedia
       profileData.acceptedTerms = fullUser.acceptedTerms
       profileData.acceptedMandate = fullUser.acceptedMandate
-      // Note: stripeCustomerId et subscriptionStatus sont des champs internes
-      // non modifiables par l'utilisateur, donc non retournés
     }
 
     if (fullUser.role === 'admin') {
-      // Les admins voient tout
       return NextResponse.json({
         success: true,
         profile: fullUser,
       })
     }
 
-    // Champs communs RGPD
     profileData.acceptedGDPR = fullUser.acceptedGDPR
 
     return NextResponse.json({
@@ -75,9 +67,9 @@ export async function GET(req: NextRequest) {
       profile: profileData,
     })
   } catch (error: any) {
-    console.error('Erreur récupération profil:', error)
+    console.error('Error fetching profile:', error)
     return NextResponse.json(
-      { error: 'Erreur lors de la récupération du profil', details: error.message },
+      { error: 'Failed to fetch profile', details: error.message },
       { status: 500 }
     )
   }

@@ -3,8 +3,8 @@ import { getCachedPayload } from '@/lib/payload-singleton'
 import { cookies } from 'next/headers'
 
 /**
- * Endpoint de login optimisé
- * Contourne le bug de performance du login natif Payload CMS 3.x
+ * POST /api/fast-login
+ * Optimized login endpoint - bypasses Payload CMS 3.x performance issues
  */
 export async function POST(req: NextRequest) {
   const startTime = Date.now()
@@ -14,14 +14,13 @@ export async function POST(req: NextRequest) {
 
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email et mot de passe requis' },
+        { error: 'Email and password required' },
         { status: 400 }
       )
     }
 
     const payload = await getCachedPayload()
 
-    // Utiliser la méthode login de Payload (elle est rapide, c'est le reste qui est lent)
     const result = await payload.login({
       collection: 'users',
       data: {
@@ -32,15 +31,14 @@ export async function POST(req: NextRequest) {
 
     if (!result.user) {
       return NextResponse.json(
-        { error: 'Email ou mot de passe incorrect' },
+        { error: 'Invalid email or password' },
         { status: 401 }
       )
     }
 
-    // Vérifier si l'utilisateur est vérifié
     if (!result.user._verified) {
       return NextResponse.json(
-        { error: 'Veuillez vérifier votre email avant de vous connecter' },
+        { error: 'Please verify your email before logging in' },
         { status: 403 }
       )
     }
@@ -48,40 +46,37 @@ export async function POST(req: NextRequest) {
     const totalTime = Date.now() - startTime
     console.log(`[PERF] Fast login took ${totalTime}ms`)
 
-    // Créer la réponse avec le cookie
     const response = NextResponse.json({
       user: result.user,
       token: result.token,
       exp: result.exp,
-      message: 'Connexion réussie',
+      message: 'Login successful',
     })
 
-    // Définir le cookie payload-token
     if (result.token) {
       response.cookies.set('payload-token', result.token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
-        maxAge: 60 * 60 * 24, // 24 heures
+        maxAge: 60 * 60 * 24,
       })
     }
 
     return response
   } catch (error: any) {
     const totalTime = Date.now() - startTime
-    console.error(`Erreur login (${totalTime}ms):`, error)
+    console.error(`Login error (${totalTime}ms):`, error)
 
-    // Gérer les erreurs d'authentification Payload
     if (error.message?.includes('credentials') || error.message?.includes('Invalid')) {
       return NextResponse.json(
-        { error: 'Email ou mot de passe incorrect' },
+        { error: 'Invalid email or password' },
         { status: 401 }
       )
     }
 
     return NextResponse.json(
-      { error: error.message || 'Erreur de connexion' },
+      { error: error.message || 'Login failed' },
       { status: 400 }
     )
   }

@@ -5,14 +5,12 @@ import { getPayload } from 'payload'
 
 /**
  * GET /api/stripe/payment-methods
- * 
- * Get all payment methods for the authenticated user
+ * Returns all payment methods for authenticated user
  */
 export async function GET(request: NextRequest) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Get authenticated user
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -26,7 +24,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ paymentMethods: [] }, { status: 200 })
     }
 
-    // Get payment methods from Stripe
     const paymentMethods = await stripe.paymentMethods.list({
       customer: user.stripeCustomerId,
       type: 'card',
@@ -46,14 +43,12 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/stripe/payment-methods
- * 
- * Attach a payment method to the user's Stripe customer
+ * Attaches payment method to user's Stripe customer and sets as default
  */
 export async function POST(request: NextRequest) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Get authenticated user
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -80,19 +75,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Attach payment method to customer
     await stripe.paymentMethods.attach(paymentMethodId, {
       customer: user.stripeCustomerId,
     })
 
-    // Set as default payment method
     await stripe.customers.update(user.stripeCustomerId, {
       invoice_settings: {
         default_payment_method: paymentMethodId,
       },
     })
 
-    // Update user in database
     await payload.update({
       collection: 'users',
       id: user.id,
@@ -118,14 +110,12 @@ export async function POST(request: NextRequest) {
 
 /**
  * DELETE /api/stripe/payment-methods
- * 
- * Detach a payment method from the user
+ * Detaches payment method from user
  */
 export async function DELETE(request: NextRequest) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Get authenticated user
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -145,10 +135,8 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Detach payment method
     await stripe.paymentMethods.detach(paymentMethodId)
 
-    // Update user in database
     await payload.update({
       collection: 'users',
       id: user.id,

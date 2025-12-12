@@ -28,7 +28,7 @@ export default function ApiDocsPage() {
           <p>
             🔗 <a href="/" className="text-[#4B2377] hover:underline">Retour à l'accueil</a>
             {' | '}
-            📚 <a href="https://github.com/jsankare/payload-purple-dog" className="text-[#4B2377] hover:underline" target="_blank" rel="noopener noreferrer">
+            <a href="https://github.com/jsankare/payload-purple-dog" className="text-[#4B2377] hover:underline" target="_blank" rel="noopener noreferrer">
               GitHub
             </a>
           </p>

@@ -2,11 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCachedPayload } from '@/lib/payload-singleton'
 
 /**
- * Endpoint de vérification email optimisé
- * Contourne le bug de performance de payload.verifyEmail() dans Payload CMS 3.x
- * qui prend 30-120 secondes au lieu de <1 seconde.
- * 
- * NOTE: L'endpoint natif /api/users/verify/:token est trop lent même sans hooks.
+ * POST /api/verify-email/[token]
+ * Optimized email verification endpoint (bypasses Payload CMS 3.x performance issues)
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const startTime = Date.now()
@@ -16,14 +13,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
 
     if (!token) {
       return NextResponse.json(
-        { error: 'Token manquant' },
+        { error: 'Token missing' },
         { status: 400 }
       )
     }
 
     const payload = await getCachedPayload()
 
-    // Trouver l'utilisateur avec ce token
     const users = await payload.find({
       collection: 'users',
       where: {
@@ -32,12 +28,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
         },
       },
       limit: 1,
-      depth: 0, // Pas de population pour aller plus vite
+      depth: 0,
     })
 
     if (users.docs.length === 0) {
       return NextResponse.json(
-        { error: 'Token invalide ou expiré' },
+        { error: 'Invalid or expired token' },
         { status: 400 }
       )
     }
@@ -46,13 +42,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
 
     if (user._verified) {
       return NextResponse.json({
-        message: 'Compte déjà vérifié',
+        message: 'Account already verified',
         success: true,
       })
     }
 
-    // Mise à jour DIRECTE en base de données sans passer par Payload
-    // pour éviter les hooks et la lenteur de payload.update()
+    /** Direct DB update to avoid hooks and improve performance */
     const db = payload.db
 
     await db.updateOne({
@@ -68,14 +63,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     console.log(`[PERF] Fast verification (direct DB) took ${totalTime}ms`)
 
     return NextResponse.json({
-      message: 'Compte vérifié avec succès.',
+      message: 'Account verified successfully',
       success: true,
     })
   } catch (error: any) {
     const totalTime = Date.now() - startTime
-    console.error(`Erreur vérification (${totalTime}ms):`, error)
+    console.error(`Verification error (${totalTime}ms):`, error)
     return NextResponse.json(
-      { error: error.message || 'Erreur de vérification' },
+      { error: error.message || 'Verification failed' },
       { status: 400 }
     )
   }

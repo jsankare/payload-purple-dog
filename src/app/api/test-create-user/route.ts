@@ -1,16 +1,16 @@
+/**
+ * POST /api/test-create-user
+ * Test endpoint to quickly create professional user (dev only)
+ */
+
 import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 
-/**
- * Endpoint de test pour créer rapidement un utilisateur professionnel
- * À utiliser uniquement en développement
- */
 export async function POST() {
   try {
     const payload = await getPayload({ config })
 
-    // Créer un utilisateur professionnel simple
     const user = await payload.create({
       collection: 'users',
       data: {
@@ -21,7 +21,7 @@ export async function POST() {
         lastName: 'Test',
         companyName: 'Test SARL',
         siret: '12345678901234',
-        officialDocument: 1, // ID fictif
+        officialDocument: 1,
         address: {
           street: '123 rue Test',
           city: 'Paris',
@@ -38,12 +38,12 @@ export async function POST() {
       success: true,
       userId: user.id,
       email: user.email,
-      message: 'Utilisateur créé avec succès',
+      message: 'User created successfully',
     })
   } catch (error: any) {
-    console.error('Erreur création utilisateur:', error)
+    console.error('Error creating user:', error)
     return NextResponse.json(
-      { error: 'Erreur création utilisateur', details: error.message },
+      { error: 'Failed to create user', details: error.message },
       { status: 500 }
     )
   }

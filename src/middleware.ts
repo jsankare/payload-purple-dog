@@ -21,7 +21,6 @@ export function middleware(request: NextRequest) {
 
   const origin = request.headers.get('origin')
   const allowedOrigins = [
-    'http://localhost:3001',
     'http://localhost:3000',
     process.env.NEXT_PUBLIC_FRONTEND_URL,
   ].filter(Boolean)

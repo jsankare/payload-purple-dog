@@ -18,7 +18,6 @@ export async function PUT(
     const payload = await getPayload({ config: configPromise })
     const { id } = await params
 
-    // Get authenticated user using Payload auth
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -28,7 +27,6 @@ export async function PUT(
       )
     }
 
-    // Fetch offer
     let offer
     try {
       offer = await payload.findByID({
@@ -42,14 +40,14 @@ export async function PUT(
       )
     }
 
-    // Fetch associated object
     const object = await payload.findByID({
       collection: 'objects',
       id: typeof offer.object === 'string' ? offer.object : offer.object.id,
     })
 
-    // Verify user is the seller or admin
-    const sellerId = typeof object.seller === 'string' ? object.seller : object.seller?.id
+    const sellerId = typeof object.seller === 'number' || typeof object.seller === 'string'
+      ? object.seller
+      : object.seller?.id
 
     if (user.role !== 'admin' && user.id !== sellerId) {
       return NextResponse.json(
@@ -58,7 +56,6 @@ export async function PUT(
       )
     }
 
-    // Validate offer status
     if (offer.status !== 'pending') {
       return NextResponse.json(
         { error: 'This offer has already been processed' },
@@ -66,7 +63,6 @@ export async function PUT(
       )
     }
 
-    // Validate object status
     if (object.status !== 'active') {
       return NextResponse.json(
         { error: 'This object is no longer available' },
@@ -74,7 +70,6 @@ export async function PUT(
       )
     }
 
-    // Update offer status
     const updatedOffer = await payload.update({
       collection: 'offers',
       id: offer.id,
@@ -83,7 +78,6 @@ export async function PUT(
       },
     })
 
-    // Update object status
     const updatedObject = await payload.update({
       collection: 'objects',
       id: object.id,
@@ -93,20 +87,17 @@ export async function PUT(
       },
     })
 
-    // Get commission rates from settings
     const settings = await payload.findGlobal({ slug: 'settings' })
     const buyerCommissionRate = settings.globalBuyerCommission || 3
     const sellerCommissionRate = settings.globalSellerCommission || 2
 
-    // Calculate amounts
     const finalPrice = offer.amount
     const buyerCommission = Math.round(finalPrice * (buyerCommissionRate / 100))
     const sellerCommission = Math.round(finalPrice * (sellerCommissionRate / 100))
-    const shippingCost = 0 // To be determined later
+    const shippingCost = 0
     const totalAmount = finalPrice + buyerCommission + shippingCost
     const sellerAmount = finalPrice - sellerCommission
 
-    // Create transaction
     const buyerId = typeof offer.buyer === 'string' ? offer.buyer : offer.buyer.id
 
     const transaction = await payload.create({
@@ -124,10 +115,10 @@ export async function PUT(
         paymentStatus: 'pending',
         status: 'payment_pending',
       },
-      overrideAccess: true, // Bypass admin-only access control
+      overrideAccess: true,
     })
 
-    // Reject all other pending offers for this object
+    /** Reject all other pending offers for this object */
     const otherOffers = await payload.find({
       collection: 'offers',
       where: {
@@ -148,7 +139,7 @@ export async function PUT(
       })
     }
 
-    // Send email notification to buyer
+    /** Send email notification to buyer */
     try {
       const { purchaseConfirmationTemplate, sendEmail } = await import('@/lib/email/templates')
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000'

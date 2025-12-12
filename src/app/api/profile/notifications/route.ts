@@ -2,21 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 
-/**
- * Route pour gérer les préférences de notifications
- * PUT /api/profile/notifications
- * PATCH /api/profile/notifications
- */
+
 async function updateNotifications(req: NextRequest) {
   try {
     const payload = await getPayload({ config })
-    
-    // Vérifier l'authentification
+
     const { user } = await payload.auth({ headers: req.headers })
-    
+
     if (!user) {
       return NextResponse.json(
-        { error: 'Non authentifié' },
+        { error: 'Unauthorized' },
         { status: 401 }
       )
     }
@@ -24,15 +19,13 @@ async function updateNotifications(req: NextRequest) {
     const body = await req.json()
     const { newsletterSubscription } = body
 
-    // Validation
     if (newsletterSubscription === undefined) {
       return NextResponse.json(
-        { error: 'Préférence de newsletter requise' },
+        { error: 'Newsletter preference required' },
         { status: 400 }
       )
     }
 
-    // Mettre à jour les préférences
     const updatedUser = await payload.update({
       collection: 'users',
       id: user.id,
@@ -43,21 +36,20 @@ async function updateNotifications(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Préférences de notifications mises à jour',
+      message: 'Notification preferences updated',
       notifications: {
         newsletterSubscription: updatedUser.newsletterSubscription,
       },
     })
   } catch (error: any) {
-    console.error('Erreur mise à jour notifications:', error)
+    console.error('Error updating notifications:', error)
     return NextResponse.json(
-      { error: 'Erreur lors de la mise à jour des préférences', details: error.message },
+      { error: 'Failed to update preferences', details: error.message },
       { status: 500 }
     )
   }
 }
 
-// Export PUT and PATCH methods
 export async function PUT(req: NextRequest) {
   return updateNotifications(req)
 }
@@ -67,19 +59,18 @@ export async function PATCH(req: NextRequest) {
 }
 
 /**
- * Récupérer les préférences de notifications
  * GET /api/profile/notifications
+ * Get notification preferences
  */
 export async function GET(req: NextRequest) {
   try {
     const payload = await getPayload({ config })
-    
-    // Vérifier l'authentification
+
     const { user } = await payload.auth({ headers: req.headers })
-    
+
     if (!user) {
       return NextResponse.json(
-        { error: 'Non authentifié' },
+        { error: 'Unauthorized' },
         { status: 401 }
       )
     }
@@ -91,9 +82,9 @@ export async function GET(req: NextRequest) {
       },
     })
   } catch (error: any) {
-    console.error('Erreur récupération notifications:', error)
+    console.error('Error fetching notifications:', error)
     return NextResponse.json(
-      { error: 'Erreur lors de la récupération des préférences', details: error.message },
+      { error: 'Failed to fetch preferences', details: error.message },
       { status: 500 }
     )
   }

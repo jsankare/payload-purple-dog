@@ -4,18 +4,13 @@ import { getPayload } from 'payload'
 
 /**
  * POST /api/transactions/create-from-offer
- * 
- * Create a transaction from an accepted offer (quick sale)
- * Called when seller accepts an offer
- * 
- * Body:
- * - offerId: string (ID of the accepted offer)
+ * Creates transaction from accepted offer (quick sale)
+ * @param offerId - ID of the accepted offer
  */
 export async function POST(request: NextRequest) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Get authenticated user
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -35,7 +30,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Fetch the offer
     const offer = await payload.findByID({
       collection: 'offers',
       id: offerId,
@@ -49,13 +43,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get the object
     const objectData = typeof offer.object === 'object' ? offer.object : await payload.findByID({
       collection: 'objects',
       id: offer.object,
     })
 
-    // Verify user is the seller
+    /** Verify user is the seller */
     const sellerId = typeof objectData.seller === 'object' ? objectData.seller.id : objectData.seller
     if (user.id !== sellerId && user.role !== 'admin') {
       return NextResponse.json(
@@ -64,7 +57,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify offer is pending
     if (offer.status !== 'pending') {
       return NextResponse.json(
         { error: 'This offer is not pending' },
@@ -72,21 +64,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get buyer (offerer)
-    const buyerId = typeof offer.offerer === 'object' ? offer.offerer.id : offer.offerer
+    const buyerId = typeof offer.buyer === 'object' ? offer.buyer.id : offer.buyer
 
-    // Get commissions from Settings (default to 3% buyer, 2% seller)
-    const buyerCommissionRate = 0.03 // 3%
-    const sellerCommissionRate = 0.02 // 2%
+    /** Calculate commissions - 3% buyer, 2% seller */
+    const buyerCommissionRate = 0.03
+    const sellerCommissionRate = 0.02
 
     const finalPrice = offer.amount
     const buyerCommission = finalPrice * buyerCommissionRate
     const sellerCommission = finalPrice * sellerCommissionRate
-    const shippingCost = 0 // Will be set during checkout
+    const shippingCost = 0
     const totalAmount = finalPrice + buyerCommission + shippingCost
     const sellerAmount = finalPrice - sellerCommission
 
-    // Create transaction
     const transaction = await payload.create({
       collection: 'transactions',
       data: {
@@ -101,7 +91,6 @@ export async function POST(request: NextRequest) {
         sellerAmount,
         paymentStatus: 'pending',
         status: 'payment_pending',
-        // Addresses will be filled during checkout
         shippingAddress: {
           street: '',
           city: '',
@@ -119,7 +108,6 @@ export async function POST(request: NextRequest) {
       overrideAccess: true,
     })
 
-    // Update offer status to accepted
     await payload.update({
       collection: 'offers',
       id: offer.id,
@@ -129,7 +117,6 @@ export async function POST(request: NextRequest) {
       overrideAccess: true,
     })
 
-    // Update object status to sold
     await payload.update({
       collection: 'objects',
       id: objectData.id,
@@ -138,10 +125,6 @@ export async function POST(request: NextRequest) {
       },
       overrideAccess: true,
     })
-
-    // TODO: Send email to buyer with link to checkout
-    // const buyerData = await payload.findByID({ collection: 'users', id: buyerId })
-    // await sendEmail(buyerData.email, 'Votre offre a été acceptée !', ...)
 
     return NextResponse.json({
       transaction,

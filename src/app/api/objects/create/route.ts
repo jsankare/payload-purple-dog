@@ -12,7 +12,6 @@ export async function POST(request: NextRequest) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Get authenticated user from request
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -22,14 +21,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Detect Content-Type and parse accordingly
     const contentType = request.headers.get('content-type') || ''
     let data: any = {
-      seller: user.id, // Assign authenticated user as seller
+      seller: user.id,
     }
 
     if (contentType.includes('application/json')) {
-      // Parse JSON body
       const body = await request.json()
 
       data.name = body.name
@@ -54,7 +51,6 @@ export async function POST(request: NextRequest) {
         data.dimensions = body.dimensions
       }
     } else {
-      // Parse FormData
       const formData = await request.formData()
 
       data.name = formData.get('name')
@@ -88,18 +84,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Required fields with defaults
-    data.photos = [] // Empty array for now (images upload to be implemented)
-    data.documents = [] // Empty array for now
+    data.photos = []
+    data.documents = []
     data.bidCount = 0
     data.viewCount = 0
     data.favoriteCount = 0
     data.auctionExtensions = 0
 
-    // Debug log
     console.log('Creating object with data:', JSON.stringify(data, null, 2))
 
-    // Create the object
     const result = await payload.create({
       collection: 'objects',
       data,

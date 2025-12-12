@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 
 /**
- * Route pour récupérer les catégories d'objets
  * GET /api/objects/categories
+ * Returns available object categories
  */
 export async function GET() {
   const categories = [

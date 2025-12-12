@@ -4,7 +4,6 @@ import { getPayload } from 'payload'
 
 /**
  * PATCH /api/objects/[id]/update-price
- * 
  * Update object price (seller only)
  * Only allowed if no pending offers/bids
  */
@@ -18,7 +17,6 @@ export async function PATCH(
     const body = await request.json()
     const { newPrice } = body
 
-    // Get authenticated user
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -28,7 +26,6 @@ export async function PATCH(
       )
     }
 
-    // Validate price
     if (!newPrice || newPrice <= 0) {
       return NextResponse.json(
         { error: 'Invalid price' },
@@ -36,7 +33,6 @@ export async function PATCH(
       )
     }
 
-    // Fetch object
     const object = await payload.findByID({
       collection: 'objects',
       id,
@@ -49,8 +45,7 @@ export async function PATCH(
       )
     }
 
-    // Verify user is the seller
-    const sellerId = typeof object.seller === 'string' ? object.seller : object.seller?.id
+    const sellerId = typeof object.seller === 'number' ? object.seller : object.seller?.id
 
     if (user.role !== 'admin' && user.id !== sellerId) {
       return NextResponse.json(
@@ -59,7 +54,6 @@ export async function PATCH(
       )
     }
 
-    // Check if object is still active
     if (object.status !== 'active') {
       return NextResponse.json(
         { error: 'Cannot update price of inactive object' },
@@ -67,7 +61,6 @@ export async function PATCH(
       )
     }
 
-    // Check for pending offers
     const pendingOffers = await payload.find({
       collection: 'offers',
       where: {
@@ -84,7 +77,6 @@ export async function PATCH(
       )
     }
 
-    // Check for active bids (if auction)
     if (object.saleMode === 'auction') {
       const activeBids = await payload.find({
         collection: 'bids',
@@ -102,7 +94,6 @@ export async function PATCH(
       }
     }
 
-    // Update price based on sale mode
     const updateData: any = {}
     if (object.saleMode === 'quick_sale') {
       updateData.quickSalePrice = newPrice

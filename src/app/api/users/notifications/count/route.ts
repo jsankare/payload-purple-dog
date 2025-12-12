@@ -4,18 +4,12 @@ import { getPayload } from 'payload'
 
 /**
  * GET /api/users/notifications/count
- * 
- * Get notification count for current user (seller)
- * Returns count of:
- * - Pending offers on user's objects
- * - New bids on user's objects
- * - New messages (offers with amount = 0)
+ * Returns notification counts for seller: pending offers, new bids, messages
  */
 export async function GET(request: NextRequest) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Get authenticated user
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -25,7 +19,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get all user's objects
     const userObjects = await payload.find({
       collection: 'objects',
       where: {
@@ -46,7 +39,6 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Count pending offers (excluding messages)
     const pendingOffers = await payload.find({
       collection: 'offers',
       where: {
@@ -57,7 +49,7 @@ export async function GET(request: NextRequest) {
       limit: 1000,
     })
 
-    // Count new messages (offers with amount = 0)
+    /** Messages are offers with amount = 0 */
     const newMessages = await payload.find({
       collection: 'offers',
       where: {
@@ -67,8 +59,6 @@ export async function GET(request: NextRequest) {
       limit: 1000,
     })
 
-    // Count new bids (bids created after user's last login)
-    // For simplicity, count all bids on user's auction objects
     const auctionObjects = userObjects.docs.filter(obj => obj.saleMode === 'auction')
     const auctionObjectIds = auctionObjects.map(obj => obj.id)
 

@@ -4,14 +4,12 @@ import { getPayload } from 'payload'
 
 /**
  * GET /api/bids/my-bids
- * 
- * Get all bids placed by the authenticated user
+ * Returns all bids placed by authenticated user
  */
 export async function GET(request: NextRequest) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Get authenticated user
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -21,14 +19,13 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Fetch user's bids
     const result = await payload.find({
       collection: 'bids',
       where: {
         bidder: { equals: user.id },
       },
       sort: '-createdAt',
-      depth: 2, // Include object and bidder details
+      depth: 2,
     })
 
     return NextResponse.json(result, { status: 200 })

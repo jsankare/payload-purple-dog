@@ -11,7 +11,6 @@ export async function GET(request: NextRequest) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Get authenticated user
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -21,7 +20,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Fetch user's sales
     const result = await payload.find({
       collection: 'transactions',
       where: {
@@ -30,7 +28,7 @@ export async function GET(request: NextRequest) {
         },
       },
       sort: '-createdAt',
-      depth: 2, // Include object and buyer details
+      depth: 2,
     })
 
     return NextResponse.json(result, { status: 200 })

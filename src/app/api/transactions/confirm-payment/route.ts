@@ -15,7 +15,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing session ID' }, { status: 400 })
     }
 
-    // 1. Verify with Stripe
     const session = await stripe.checkout.sessions.retrieve(sessionId)
 
     if (session.payment_status !== 'paid') {
@@ -30,8 +29,6 @@ export async function POST(request: NextRequest) {
 
     const payload = await getPayload({ config: configPromise })
 
-    // 2. Find and update transaction
-    // We fetch first to ensure it exists and check current status if needed
     const transaction = await payload.findByID({
       collection: 'transactions',
       id: transactionId,
@@ -41,13 +38,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Transaction not found' }, { status: 404 })
     }
 
-    // Update status if not already updated
-    if (transaction.paymentStatus !== 'paid' && transaction.paymentStatus !== 'held') {
+    if (transaction.paymentStatus !== 'held') {
       await payload.update({
         collection: 'transactions',
         id: transactionId,
         data: {
-          paymentStatus: 'held', // Or 'paid', depending on your logic (held for marketplaces usually)
+          paymentStatus: 'held',
           status: 'awaiting_shipping',
           paidAt: new Date().toISOString(),
           paymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : undefined,

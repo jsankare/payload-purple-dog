@@ -3,9 +3,8 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 
 /**
- * Route de login avec vérification du statut du compte
  * POST /api/users/login-check
- * Cette route vérifie d'abord le statut du compte avant de permettre la connexion
+ * Login with account status verification
  */
 export async function POST(req: NextRequest) {
   try {
@@ -15,12 +14,11 @@ export async function POST(req: NextRequest) {
 
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email et mot de passe requis' },
+        { error: 'Email and password required' },
         { status: 400 }
       )
     }
 
-    // Récupérer l'utilisateur par email
     const users = await payload.find({
       collection: 'users',
       where: {
@@ -33,18 +31,17 @@ export async function POST(req: NextRequest) {
 
     if (users.docs.length === 0) {
       return NextResponse.json(
-        { error: 'Email ou mot de passe incorrect' },
+        { error: 'Invalid email or password' },
         { status: 401 }
       )
     }
 
     const user = users.docs[0]
 
-    // Vérifier le statut du compte AVANT d'essayer de se connecter
     if (user.accountStatus === 'suspended') {
       return NextResponse.json(
-        { 
-          error: 'Votre compte a été suspendu. Veuillez contacter un administrateur.',
+        {
+          error: 'Your account has been suspended. Please contact an administrator.',
           accountStatus: 'suspended'
         },
         { status: 403 }
@@ -53,15 +50,14 @@ export async function POST(req: NextRequest) {
 
     if (user.accountStatus === 'rejected') {
       return NextResponse.json(
-        { 
-          error: 'Votre compte a été rejeté.',
+        {
+          error: 'Your account has been rejected.',
           accountStatus: 'rejected'
         },
         { status: 403 }
       )
     }
 
-    // Si le compte est OK, effectuer le login normal via Payload
     const loginResult = await payload.login({
       collection: 'users',
       data: {
@@ -71,7 +67,7 @@ export async function POST(req: NextRequest) {
     })
 
     return NextResponse.json({
-      message: 'Connexion réussie',
+      message: 'Login successful',
       token: loginResult.token,
       user: {
         id: loginResult.user.id,
@@ -84,18 +80,17 @@ export async function POST(req: NextRequest) {
       exp: loginResult.exp,
     })
   } catch (error: any) {
-    console.error('Erreur login:', error)
-    
-    // Gérer les erreurs de Payload
+    console.error('Login error:', error)
+
     if (error.message?.includes('Invalid login')) {
       return NextResponse.json(
-        { error: 'Email ou mot de passe incorrect' },
+        { error: 'Invalid email or password' },
         { status: 401 }
       )
     }
 
     return NextResponse.json(
-      { error: 'Erreur lors de la connexion', details: error.message },
+      { error: 'Login failed', details: error.message },
       { status: 500 }
     )
   }

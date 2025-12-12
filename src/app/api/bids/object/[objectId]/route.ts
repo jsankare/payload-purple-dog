@@ -4,10 +4,7 @@ import { getPayload } from 'payload'
 
 /**
  * GET /api/bids/object/[objectId]
- * 
- * Get bid history for a specific object
- * 
- * @param params.objectId - Object ID
+ * Returns bid history for specific object
  */
 export async function GET(
   request: NextRequest,
@@ -17,14 +14,13 @@ export async function GET(
     const payload = await getPayload({ config: configPromise })
     const { objectId } = await params
 
-    // Fetch bids for this object
     const result = await payload.find({
       collection: 'bids',
       where: {
         object: { equals: objectId },
       },
       sort: '-createdAt',
-      limit: 100, // Limit to last 100 bids
+      limit: 100,
     })
 
     return NextResponse.json(result, { status: 200 })

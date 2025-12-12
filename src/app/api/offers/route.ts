@@ -5,9 +5,7 @@ import { newOfferTemplate, sendEmail } from '@/lib/email/templates'
 
 /**
  * POST /api/offers
- * 
  * Create an offer on a quick_sale object
- * 
  * Body:
  * - objectId: string
  * - amount: number
@@ -17,7 +15,6 @@ export async function POST(request: NextRequest) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Get authenticated user using Payload auth
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -27,7 +24,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify user is professional with active subscription
     if (user.role !== 'professionnel') {
       return NextResponse.json(
         { error: 'Only professionals can make offers' },
@@ -42,11 +38,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Parse request body
     const body = await request.json()
     const { objectId, amount, message } = body
 
-    // Validate input
     if (!objectId || !amount) {
       return NextResponse.json(
         { error: 'objectId and amount are required' },
@@ -61,7 +55,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Fetch object
     let object
     try {
       object = await payload.findByID({
@@ -75,7 +68,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate object is in quick_sale mode
     if (object.saleMode !== 'quick_sale') {
       return NextResponse.json(
         { error: 'This object is not in quick sale mode' },
@@ -83,7 +75,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate object is active
     if (object.status !== 'active') {
       return NextResponse.json(
         { error: 'This object is not available for offers' },
@@ -91,10 +82,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Calculate expiration date (7 days from now)
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
 
-    // Create offer
     const offer = await payload.create({
       collection: 'offers',
       data: {
@@ -107,7 +96,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Send email notification to seller
+    /** Send email notification to seller */
     try {
       if (object.seller) {
         const seller = await payload.findByID({
@@ -126,7 +115,6 @@ export async function POST(request: NextRequest) {
         await sendEmail(seller.email, 'Nouvelle offre reçue !', html)
       }
     } catch (emailError) {
-      // Log email error but don't fail the request
       console.error('Error sending offer notification email:', emailError)
     }
 

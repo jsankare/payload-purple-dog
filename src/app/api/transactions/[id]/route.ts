@@ -4,7 +4,6 @@ import { getPayload } from 'payload'
 
 /**
  * GET /api/transactions/[id]
- * 
  * Get a single transaction by ID
  * User must be buyer, seller, or admin
  */
@@ -16,7 +15,6 @@ export async function GET(
     const { id } = await params
     const payload = await getPayload({ config: configPromise })
 
-    // Get authenticated user
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -26,7 +24,6 @@ export async function GET(
       )
     }
 
-    // Fetch transaction
     const transaction = await payload.findByID({
       collection: 'transactions',
       id,
@@ -40,7 +37,6 @@ export async function GET(
       )
     }
 
-    // Verify user has access (buyer, seller, or admin)
     const buyerId = typeof transaction.buyer === 'object' ? transaction.buyer.id : transaction.buyer
     const sellerId = typeof transaction.seller === 'object' ? transaction.seller.id : transaction.seller
 

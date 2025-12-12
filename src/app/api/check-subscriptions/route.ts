@@ -3,15 +3,14 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 
 /**
- * Endpoint pour vérifier les abonnements expirés et restreindre les comptes
- * À exécuter via un cron job quotidien
+ * POST /api/check-subscriptions
+ * Checks expired subscriptions and restricts accounts (cron job)
  */
 export async function POST() {
   try {
     const payload = await getPayload({ config })
     const now = new Date()
 
-    // Trouver tous les abonnements en période d'essai
     const trialingSubscriptions = await payload.find({
       collection: 'subscriptions',
       where: {
@@ -25,24 +24,20 @@ export async function POST() {
     let restrictedCount = 0
     let errors: string[] = []
 
-    // Vérifier chaque abonnement
     for (const subscription of trialingSubscriptions.docs) {
       try {
         const trialEnd = subscription.trialEnd ? new Date(subscription.trialEnd) : null
 
-        // Si la période d'essai est expirée
         if (trialEnd && now > trialEnd) {
           const userId = typeof subscription.user === 'object' ? subscription.user.id : subscription.user
 
-          // Récupérer l'utilisateur
           const user = await payload.findByID({
             collection: 'users',
             id: userId,
           })
 
-          // Vérifier s'il a payé (s'il a un stripeSubscriptionId actif)
+          /** User has paid - activate subscription */
           if (user.stripeSubscriptionId) {
-            // L'utilisateur a payé, passer en mode actif
             await payload.update({
               collection: 'subscriptions',
               id: subscription.id,
@@ -61,7 +56,7 @@ export async function POST() {
 
             console.log(`✅ Abonnement activé pour ${user.email}`)
           } else {
-            // L'utilisateur n'a pas payé, restreindre le compte
+            /** User hasn't paid - restrict account */
             await payload.update({
               collection: 'subscriptions',
               id: subscription.id,
@@ -105,7 +100,9 @@ export async function POST() {
 }
 
 /**
- * Endpoint GET pour vérifier le statut d'un utilisateur spécifique
+ * GET /api/check-subscriptions
+ * Checks subscription status for specific user
+ * @param userId - User ID to check
  */
 export async function GET(request: Request) {
   try {
@@ -133,11 +130,10 @@ export async function GET(request: Request) {
       )
     }
 
-    // Vérifier le statut de l'abonnement
     let subscriptionDetails = null
     if (user.currentSubscription) {
-      const subId = typeof user.currentSubscription === 'object' 
-        ? user.currentSubscription.id 
+      const subId = typeof user.currentSubscription === 'object'
+        ? user.currentSubscription.id
         : user.currentSubscription
 
       subscriptionDetails = await payload.findByID({
@@ -149,19 +145,18 @@ export async function GET(request: Request) {
     const now = new Date()
     const trialEnd = subscriptionDetails?.trialEnd ? new Date(subscriptionDetails.trialEnd) : null
     const isTrialExpired = trialEnd ? now > trialEnd : false
-    
-    // Pour les professionnels sans abonnement, calculer trial automatique basé sur date d'inscription
+
+    /** Auto-calculate trial for professionals without subscription (30 days from signup) */
     let effectiveStatus = user.subscriptionStatus
     let autoTrialEnd = null
-    
+
     if (user.role === 'professionnel' && !user.subscriptionStatus) {
       const createdAt = new Date(user.createdAt)
       const trialEndDate = new Date(createdAt)
-      trialEndDate.setDate(trialEndDate.getDate() + 30) // 30 jours d'essai
-      
+      trialEndDate.setDate(trialEndDate.getDate() + 30)
+
       autoTrialEnd = trialEndDate
-      
-      // Si moins de 30 jours depuis l'inscription, donner accès trial
+
       if (now < trialEndDate) {
         effectiveStatus = 'trialing'
       } else {
@@ -188,7 +183,7 @@ export async function GET(request: Request) {
       } : null),
       canPurchase: effectiveStatus === 'active' || effectiveStatus === 'trialing',
       canSell: effectiveStatus === 'active' || effectiveStatus === 'trialing',
-      canView: true, // Tous peuvent voir
+      canView: true,
     })
 
   } catch (error: any) {

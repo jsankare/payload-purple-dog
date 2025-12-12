@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayloadHMR } from '@payloadcms/next/utilities'
 import config from '@payload-config'
 
+/**
+ * POST /api/create-admin
+ * Creates default admin user (only if none exists)
+ */
 export async function POST(request: NextRequest) {
   try {
     const payload = await getPayloadHMR({ config })
 
-    // Vérifier si un admin existe déjà
     const existingAdmins = await payload.find({
       collection: 'users',
       where: {
@@ -30,7 +33,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Créer l'admin
     const admin = await payload.create({
       collection: 'users',
       data: {
@@ -46,9 +48,8 @@ export async function POST(request: NextRequest) {
           country: 'France',
         },
         acceptedGDPR: true,
-        _verified: true, // Email vérifié
-        emailVerified: true,
-        accountStatus: 'active', // Compte actif
+        _verified: true,
+        accountStatus: 'active',
       },
     })
 

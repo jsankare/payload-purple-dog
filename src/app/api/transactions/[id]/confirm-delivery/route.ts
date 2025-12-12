@@ -5,10 +5,8 @@ import { capturePaymentIntent } from '@/lib/stripe'
 
 /**
  * POST /api/transactions/[id]/confirm-delivery
- * 
  * Confirm delivery and release funds to seller
  * Captures the Stripe Payment Intent
- * 
  * @param params.id - Transaction ID
  */
 export async function POST(
@@ -19,7 +17,6 @@ export async function POST(
     const payload = await getPayload({ config: configPromise })
     const { id } = await params
 
-    // Get authenticated user using Payload auth
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -29,7 +26,6 @@ export async function POST(
       )
     }
 
-    // Fetch transaction
     let transaction
     try {
       transaction = await payload.findByID({
@@ -43,7 +39,6 @@ export async function POST(
       )
     }
 
-    // Verify user is the buyer or admin
     const buyerId = typeof transaction.buyer === 'string'
       ? transaction.buyer
       : transaction.buyer?.id
@@ -55,7 +50,6 @@ export async function POST(
       )
     }
 
-    // Validate payment status
     if (transaction.paymentStatus !== 'held') {
       return NextResponse.json(
         { error: 'Payment must be held before confirming delivery' },
@@ -63,7 +57,6 @@ export async function POST(
       )
     }
 
-    // Validate transaction status
     if (transaction.status !== 'in_transit' && transaction.status !== 'delivered') {
       return NextResponse.json(
         { error: 'Transaction must be in transit or delivered to confirm' },
@@ -71,7 +64,6 @@ export async function POST(
       )
     }
 
-    // Validate payment intent exists
     if (!transaction.paymentIntentId) {
       return NextResponse.json(
         { error: 'No payment intent found for this transaction' },
@@ -79,10 +71,8 @@ export async function POST(
       )
     }
 
-    // Capture payment (release funds to seller)
     await capturePaymentIntent(transaction.paymentIntentId)
 
-    // Update transaction
     const updated = await payload.update({
       collection: 'transactions',
       id: transaction.id,

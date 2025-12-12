@@ -4,7 +4,6 @@ import { getPayload } from 'payload'
 
 /**
  * POST /api/transactions/create-from-bid
- * 
  * Create a transaction from a won auction bid
  * Called automatically when auction ends or manually by admin
  * 
@@ -15,7 +14,6 @@ export async function POST(request: NextRequest) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Get authenticated user
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -25,8 +23,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Only admin can manually create transactions
-    // (System will use overrideAccess for automatic creation)
     if (user.role !== 'admin') {
       return NextResponse.json(
         { error: 'Only admins can manually create transactions' },
@@ -44,7 +40,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Fetch the bid
     const bid = await payload.findByID({
       collection: 'bids',
       id: bidId,
@@ -58,7 +53,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify bid is the winning bid
     if (bid.status !== 'highest') {
       return NextResponse.json(
         { error: 'This bid is not the winning bid' },
@@ -66,30 +60,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get the object
     const objectData = typeof bid.object === 'object' ? bid.object : await payload.findByID({
       collection: 'objects',
       id: bid.object,
     })
 
-    // Get seller
     const sellerId = typeof objectData.seller === 'object' ? objectData.seller.id : objectData.seller
-
-    // Get buyer (bidder)
     const buyerId = typeof bid.bidder === 'object' ? bid.bidder.id : bid.bidder
 
-    // Get commissions from Settings (default to 3% buyer, 2% seller)
-    const buyerCommissionRate = 0.03 // 3%
-    const sellerCommissionRate = 0.02 // 2%
+    const buyerCommissionRate = 0.03
+    const sellerCommissionRate = 0.02
 
     const finalPrice = bid.amount
     const buyerCommission = finalPrice * buyerCommissionRate
     const sellerCommission = finalPrice * sellerCommissionRate
-    const shippingCost = 0 // Will be set during checkout
+    const shippingCost = 0
     const totalAmount = finalPrice + buyerCommission + shippingCost
     const sellerAmount = finalPrice - sellerCommission
 
-    // Create transaction
     const transaction = await payload.create({
       collection: 'transactions',
       data: {
@@ -104,7 +92,6 @@ export async function POST(request: NextRequest) {
         sellerAmount,
         paymentStatus: 'pending',
         status: 'payment_pending',
-        // Addresses will be filled during checkout
         shippingAddress: {
           street: '',
           city: '',
@@ -117,12 +104,11 @@ export async function POST(request: NextRequest) {
           postalCode: '',
           country: 'France',
         },
-        notes: `Transaction créée automatiquement pour l'enchère #${bid.id}`,
+        notes: `Transaction created automatically for auction #${bid.id}`,
       },
       overrideAccess: true,
     })
 
-    // Update object status to sold
     await payload.update({
       collection: 'objects',
       id: objectData.id,
@@ -131,10 +117,6 @@ export async function POST(request: NextRequest) {
       },
       overrideAccess: true,
     })
-
-    // TODO: Send email to buyer with link to checkout
-    // const buyerData = await payload.findByID({ collection: 'users', id: buyerId })
-    // await sendEmail(buyerData.email, 'Vous avez remporté l\'enchère !', ...)
 
     return NextResponse.json({
       transaction,

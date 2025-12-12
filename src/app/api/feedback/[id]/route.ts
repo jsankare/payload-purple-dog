@@ -3,35 +3,34 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 
 /**
- * Route pour modifier un avis
- * PUT /api/feedback/:id
- * - Un utilisateur peut modifier ses propres avis
- * - Un admin peut modifier n'importe quel avis
+ * PUT /api/feedback/[id]
+ * Update feedback (owner or admin only)
+ * 
+ * DELETE /api/feedback/[id]
+ * Delete feedback (owner or admin only)
  */
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const params = await props.params
-    const payload = await getPayload({ config })
     const { id } = await params
+    const payload = await getPayload({ config })
 
-    // Vérifier l'authentification
     const { user } = await payload.auth({ headers: req.headers })
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Non authentifié' },
+        { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
     const feedbackId = parseInt(id)
-    
+
     if (isNaN(feedbackId)) {
       return NextResponse.json(
-        { error: 'ID invalide' },
+        { error: 'Invalid ID' },
         { status: 400 }
       )
     }
@@ -39,22 +38,20 @@ export async function PUT(
     const body = await req.json()
     const { stars, npsScore, comment } = body
 
-    // Validation des données
     if (stars !== undefined && (stars < 1 || stars > 5)) {
       return NextResponse.json(
-        { error: 'La note étoiles doit être entre 1 et 5' },
+        { error: 'Star rating must be between 1 and 5' },
         { status: 400 }
       )
     }
 
     if (npsScore !== undefined && (npsScore < 1 || npsScore > 10)) {
       return NextResponse.json(
-        { error: 'La note NPS doit être entre 1 et 10' },
+        { error: 'NPS score must be between 1 and 10' },
         { status: 400 }
       )
     }
 
-    // Récupérer l'avis pour vérifier les permissions
     const feedback = await payload.findByID({
       collection: 'feedback',
       id: feedbackId,
@@ -62,25 +59,23 @@ export async function PUT(
 
     if (!feedback) {
       return NextResponse.json(
-        { error: 'Avis non trouvé' },
+        { error: 'Feedback not found' },
         { status: 404 }
       )
     }
 
-    // Vérifier les permissions
-    const isOwner = typeof feedback.user === 'object' 
-      ? feedback.user.id === user.id 
+    const isOwner = typeof feedback.user === 'object'
+      ? feedback.user.id === user.id
       : feedback.user === user.id
     const isAdmin = user.role === 'admin'
 
     if (!isOwner && !isAdmin) {
       return NextResponse.json(
-        { error: 'Vous n\'avez pas la permission de modifier cet avis' },
+        { error: 'You do not have permission to edit this feedback' },
         { status: 403 }
       )
     }
 
-    // Mettre à jour l'avis
     const updatedFeedback = await payload.update({
       collection: 'feedback',
       id: feedbackId,
@@ -93,7 +88,7 @@ export async function PUT(
 
     return NextResponse.json({
       success: true,
-      message: 'Avis modifié avec succès',
+      message: 'Feedback updated successfully',
       feedback: {
         id: updatedFeedback.id,
         stars: updatedFeedback.stars,
@@ -104,49 +99,40 @@ export async function PUT(
       },
     })
   } catch (error: any) {
-    console.error('Erreur modification feedback:', error)
+    console.error('Error updating feedback:', error)
     return NextResponse.json(
-      { error: 'Erreur lors de la modification de l\'avis', details: error.message },
+      { error: 'Failed to update feedback', details: error.message },
       { status: 500 }
     )
   }
 }
 
-/**
- * Route pour supprimer un avis
- * DELETE /api/feedback/:id
- * - Un utilisateur peut supprimer ses propres avis
- * - Un admin peut supprimer n'importe quel avis
- */
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const params = await props.params
-    const payload = await getPayload({ config })
     const { id } = await params
+    const payload = await getPayload({ config })
 
-    // Vérifier l'authentification
     const { user } = await payload.auth({ headers: req.headers })
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Non authentifié' },
+        { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
     const feedbackId = parseInt(id)
-    
+
     if (isNaN(feedbackId)) {
       return NextResponse.json(
-        { error: 'ID invalide' },
+        { error: 'Invalid ID' },
         { status: 400 }
       )
     }
 
-    // Récupérer l'avis pour vérifier les permissions
     const feedback = await payload.findByID({
       collection: 'feedback',
       id: feedbackId,
@@ -154,26 +140,23 @@ export async function DELETE(
 
     if (!feedback) {
       return NextResponse.json(
-        { error: 'Avis non trouvé' },
+        { error: 'Feedback not found' },
         { status: 404 }
       )
     }
 
-    // Vérifier les permissions
-    // L'utilisateur doit être soit le propriétaire, soit un admin
-    const isOwner = typeof feedback.user === 'object' 
-      ? feedback.user.id === user.id 
+    const isOwner = typeof feedback.user === 'object'
+      ? feedback.user.id === user.id
       : feedback.user === user.id
     const isAdmin = user.role === 'admin'
 
     if (!isOwner && !isAdmin) {
       return NextResponse.json(
-        { error: 'Vous n\'avez pas la permission de supprimer cet avis' },
+        { error: 'You do not have permission to delete this feedback' },
         { status: 403 }
       )
     }
 
-    // Supprimer l'avis
     await payload.delete({
       collection: 'feedback',
       id: feedbackId,
@@ -181,12 +164,12 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: 'Avis supprimé avec succès',
+      message: 'Feedback deleted successfully',
     })
   } catch (error: any) {
-    console.error('Erreur suppression feedback:', error)
+    console.error('Error deleting feedback:', error)
     return NextResponse.json(
-      { error: 'Erreur lors de la suppression de l\'avis', details: error.message },
+      { error: 'Failed to delete feedback', details: error.message },
       { status: 500 }
     )
   }

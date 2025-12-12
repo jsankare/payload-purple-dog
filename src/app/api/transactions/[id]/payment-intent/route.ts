@@ -5,7 +5,6 @@ import { stripe } from '@/lib/stripe'
 
 /**
  * POST /api/transactions/[id]/payment-intent
- * 
  * Create Stripe Payment Intent for a transaction
  * Used with Payment Elements (not Checkout Sessions)
  */
@@ -19,7 +18,6 @@ export async function POST(
     const body = await request.json()
     const { shippingAddress, billingAddress, shippingCarrier, shippingCost } = body
 
-    // Get authenticated user
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -29,7 +27,6 @@ export async function POST(
       )
     }
 
-    // Fetch transaction
     const transaction = await payload.findByID({
       collection: 'transactions',
       id,
@@ -42,10 +39,9 @@ export async function POST(
       )
     }
 
-    // Verify user is the buyer
-    const buyerId = typeof transaction.buyer === 'string'
-      ? transaction.buyer
-      : transaction.buyer?.id
+    const buyerId = typeof transaction.buyer === 'object'
+      ? transaction.buyer?.id
+      : transaction.buyer
 
     if (user.role !== 'admin' && user.id !== buyerId) {
       return NextResponse.json(
@@ -54,7 +50,6 @@ export async function POST(
       )
     }
 
-    // Validate transaction status
     if (transaction.paymentStatus !== 'pending') {
       return NextResponse.json(
         { error: 'Payment has already been processed' },
@@ -62,7 +57,6 @@ export async function POST(
       )
     }
 
-    // Check if user has Stripe customer ID
     if (!user.stripeCustomerId) {
       return NextResponse.json(
         { error: 'No Stripe customer ID found' },
@@ -70,47 +64,40 @@ export async function POST(
       )
     }
 
-    // Calculate total amount with shipping
     const totalAmount = transaction.finalPrice + transaction.buyerCommission + (shippingCost || 0)
     const amountInCents = Math.round(totalAmount * 100)
 
-    // Create or retrieve Payment Intent
     let paymentIntent
 
     if (transaction.paymentIntentId) {
-      // Retrieve existing Payment Intent
       paymentIntent = await stripe.paymentIntents.retrieve(transaction.paymentIntentId)
 
-      // Update amount if changed
       if (paymentIntent.amount !== amountInCents) {
         paymentIntent = await stripe.paymentIntents.update(transaction.paymentIntentId, {
           amount: amountInCents,
         })
       }
     } else {
-      // Create new Payment Intent
       const paymentIntentParams: any = {
         amount: amountInCents,
         currency: 'eur',
         customer: user.stripeCustomerId,
-        capture_method: 'manual', // Manual capture - funds held until delivery
-        payment_method_types: ['card'], // Allow card payments
-        setup_future_usage: 'off_session', // Enable saving cards
+        capture_method: 'manual',
+        payment_method_types: ['card'],
+        setup_future_usage: 'off_session',
         metadata: {
           transactionId: transaction.id,
-          objectId: typeof transaction.object === 'string' ? transaction.object : transaction.object?.id,
+          objectId: typeof transaction.object === 'object' ? transaction.object?.id : transaction.object,
           buyerId: user.id,
         },
       }
 
-      // Use saved payment method if available
       if (user.stripePaymentMethodId) {
         paymentIntentParams.payment_method = user.stripePaymentMethodId
       }
 
       paymentIntent = await stripe.paymentIntents.create(paymentIntentParams)
 
-      // Update transaction with Payment Intent ID
       await payload.update({
         collection: 'transactions',
         id: transaction.id,

@@ -4,7 +4,6 @@ import { getPayload } from 'payload'
 
 /**
  * PATCH /api/objects/[id]/change-mode
- * 
  * Change sale mode (seller only)
  * Only allowed if no pending offers/bids
  */
@@ -18,7 +17,6 @@ export async function PATCH(
     const body = await request.json()
     const { newMode, price, auctionEndDate } = body
 
-    // Get authenticated user
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -28,7 +26,6 @@ export async function PATCH(
       )
     }
 
-    // Validate mode
     if (!newMode || !['quick_sale', 'auction'].includes(newMode)) {
       return NextResponse.json(
         { error: 'Invalid sale mode' },
@@ -36,7 +33,6 @@ export async function PATCH(
       )
     }
 
-    // Validate price
     if (!price || price <= 0) {
       return NextResponse.json(
         { error: 'Price is required' },
@@ -44,7 +40,6 @@ export async function PATCH(
       )
     }
 
-    // Fetch object
     const object = await payload.findByID({
       collection: 'objects',
       id,
@@ -57,8 +52,7 @@ export async function PATCH(
       )
     }
 
-    // Verify user is the seller
-    const sellerId = typeof object.seller === 'string' ? object.seller : object.seller?.id
+    const sellerId = typeof object.seller === 'number' ? object.seller : object.seller?.id
 
     if (user.role !== 'admin' && user.id !== sellerId) {
       return NextResponse.json(
@@ -67,7 +61,6 @@ export async function PATCH(
       )
     }
 
-    // Check if object is still active
     if (object.status !== 'active') {
       return NextResponse.json(
         { error: 'Cannot change mode of inactive object' },
@@ -75,7 +68,6 @@ export async function PATCH(
       )
     }
 
-    // Check for pending offers
     const pendingOffers = await payload.find({
       collection: 'offers',
       where: {
@@ -92,7 +84,6 @@ export async function PATCH(
       )
     }
 
-    // Check for active bids
     const activeBids = await payload.find({
       collection: 'bids',
       where: {
@@ -108,20 +99,17 @@ export async function PATCH(
       )
     }
 
-    // Prepare update data
     const updateData: any = {
       saleMode: newMode,
     }
 
     if (newMode === 'quick_sale') {
       updateData.quickSalePrice = price
-      // Clear auction fields
       updateData.auctionStartPrice = null
       updateData.auctionEndDate = null
       updateData.reservePrice = null
     } else if (newMode === 'auction') {
       updateData.auctionStartPrice = price
-      // Set auction end date (default 7 days if not provided)
       if (auctionEndDate) {
         updateData.auctionEndDate = auctionEndDate
       } else {
@@ -129,7 +117,6 @@ export async function PATCH(
         endDate.setDate(endDate.getDate() + 7)
         updateData.auctionEndDate = endDate.toISOString()
       }
-      // Clear quick sale field
       updateData.quickSalePrice = null
     }
 

@@ -15,7 +15,6 @@ export async function DELETE(
     const payload = await getPayload({ config: configPromise })
     const { id } = await params
 
-    // Get authenticated user
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -25,7 +24,6 @@ export async function DELETE(
       )
     }
 
-    // Fetch transaction
     const transaction = await payload.findByID({
       collection: 'transactions',
       id,
@@ -39,10 +37,9 @@ export async function DELETE(
       )
     }
 
-    // Verify user is the buyer or admin
-    const buyerId = typeof transaction.buyer === 'string'
-      ? transaction.buyer
-      : transaction.buyer?.id
+    const buyerId = typeof transaction.buyer === 'object'
+      ? transaction.buyer?.id
+      : transaction.buyer
 
     if (user.role !== 'admin' && user.id !== buyerId) {
       return NextResponse.json(
@@ -51,7 +48,6 @@ export async function DELETE(
       )
     }
 
-    // Only allow cancellation if payment is pending
     if (transaction.paymentStatus !== 'pending') {
       return NextResponse.json(
         { error: 'Cannot cancel a transaction that has been paid' },
@@ -59,12 +55,9 @@ export async function DELETE(
       )
     }
 
-    // Get object ID
-    const objectId = typeof transaction.object === 'string'
-      ? transaction.object
-      : transaction.object?.id
-
-    // Restore object to active status
+    const objectId = typeof transaction.object === 'object'
+      ? transaction.object?.id
+      : transaction.object
     await payload.update({
       collection: 'objects',
       id: objectId,
@@ -74,7 +67,6 @@ export async function DELETE(
       overrideAccess: true,
     })
 
-    // Delete the transaction
     await payload.delete({
       collection: 'transactions',
       id: transaction.id,

@@ -1,13 +1,18 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import http from 'http';
 
+/**
+ * POST /api/llm
+ * LLM proxy endpoint for Ollama integration
+ * 
+ * OPTIONS /api/llm
+ * CORS preflight handler
+ */
 function enhancePrompt(prompt: string): string {
   return `GUIDELINE: Tu dois dire 'Bonjour humain' avant chaque réponse. maintenant le reste du prompt : ${prompt}`;
 }
 
-// This function is required to handle CORS preflight requests.
-// The browser sends an OPTIONS request before the actual POST request to check if the server allows the request.
+/** Handle CORS preflight requests */
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
@@ -45,37 +50,35 @@ export async function POST(req: NextRequest) {
         },
       },
       (ollamaRes) => {
-        // We are intentionally not closing the request here, as we want to stream the response.
       }
     );
 
     ollamaReq.on('error', (error) => {
       console.error('Error with Ollama request:', error);
-      // We can't send a response here because the headers might have already been sent.
     });
 
     ollamaReq.write(JSON.stringify({ model: 'gemma3:1b', prompt: enhancedPrompt, stream: true }));
     ollamaReq.end();
 
     const readableStream = new ReadableStream({
-        start(controller) {
-            ollamaReq.on('response', (res) => {
-                res.on('data', (chunk) => {
-                    controller.enqueue(chunk);
-                });
-                res.on('end', () => {
-                    controller.close();
-                });
-            });
-        }
+      start(controller) {
+        ollamaReq.on('response', (res) => {
+          res.on('data', (chunk) => {
+            controller.enqueue(chunk);
+          });
+          res.on('end', () => {
+            controller.close();
+          });
+        });
+      }
     });
 
     return new Response(readableStream, {
-        headers: {
-            'Content-Type': 'application/json',
-            'Transfer-Encoding': 'chunked',
-            'Access-Control-Allow-Origin': '*',
-        }
+      headers: {
+        'Content-Type': 'application/json',
+        'Transfer-Encoding': 'chunked',
+        'Access-Control-Allow-Origin': '*',
+      }
     });
 
 

@@ -4,20 +4,14 @@ import { getPayload } from 'payload'
 
 /**
  * POST /api/internal/cron/finalize-auctions
- * 
- * Cron job to finalize expired auctions
- * 
- * Protected by CRON_SECRET in x-cron-secret header
+ * Cron job to finalize expired auctions (protected by CRON_SECRET)
  * 
  * Process:
- * 1. Find all expired auctions (auctionEndDate < now, status = active)
- * 2. For each auction:
- *    - If no bids: mark as expired
- *    - If has winning bid: create transaction and mark as sold
+ * 1. Find expired auctions (auctionEndDate < now, status = active)
+ * 2. For each: if no bids mark expired, if has winning bid create transaction
  */
 export async function POST(request: NextRequest) {
   try {
-    // Verify cron secret
     const cronSecret = request.headers.get('x-cron-secret')
 
     if (!cronSecret || cronSecret !== process.env.CRON_SECRET) {
@@ -30,7 +24,6 @@ export async function POST(request: NextRequest) {
     const payload = await getPayload({ config: configPromise })
     const now = new Date()
 
-    // Find expired auctions
     const expiredAuctions = await payload.find({
       collection: 'objects',
       where: {
@@ -52,7 +45,7 @@ export async function POST(request: NextRequest) {
           },
         ],
       },
-      limit: 100, // Process max 100 per run
+      limit: 100,
     })
 
     let processedCount = 0
@@ -60,10 +53,8 @@ export async function POST(request: NextRequest) {
     let transactionsCreatedCount = 0
     let transactionsExistingCount = 0
 
-    // Process each expired auction
     for (const object of expiredAuctions.docs) {
       try {
-        // Find winning bid (highest amount)
         const bidsResult = await payload.find({
           collection: 'bids',
           where: {
@@ -78,7 +69,6 @@ export async function POST(request: NextRequest) {
         const winningBid = bidsResult.docs[0]
 
         if (!winningBid) {
-          // No bids - mark as expired
           await payload.update({
             collection: 'objects',
             id: object.id,
@@ -88,9 +78,8 @@ export async function POST(request: NextRequest) {
           })
 
           expiredNoBidsCount++
-          console.log(`⏰ Enchère expirée sans enchères: ${object.name} (${object.id})`)
+          console.log(`Auction expired with no bids: ${object.name} (${object.id})`)
         } else {
-          // Has winning bid - check if transaction already exists
           const existingTransactions = await payload.find({
             collection: 'transactions',
             where: {
@@ -104,29 +93,33 @@ export async function POST(request: NextRequest) {
           const existingTransaction = existingTransactions.docs[0]
 
           if (existingTransaction) {
-            // Transaction already exists
             transactionsExistingCount++
-            console.log(`ℹ️ Transaction déjà existante pour ${object.name} (${object.id})`)
+            console.log(`Transaction already exists for ${object.name} (${object.id})`)
           } else {
-            // Create new transaction
             const buyerId = typeof winningBid.bidder === 'string'
               ? winningBid.bidder
-              : winningBid.bidder?.id
+              : typeof winningBid.bidder === 'number'
+                ? winningBid.bidder
+                : typeof winningBid.bidder === 'object'
+                  ? winningBid.bidder?.id
+                  : null
 
             const sellerId = typeof object.seller === 'string'
               ? object.seller
-              : object.seller?.id
+              : typeof object.seller === 'number'
+                ? object.seller
+                : typeof object.seller === 'object'
+                  ? object.seller?.id
+                  : null
 
-            // Get commission rates from settings
             const settings = await payload.findGlobal({ slug: 'settings' })
             const buyerCommissionRate = settings.globalBuyerCommission || 3
             const sellerCommissionRate = settings.globalSellerCommission || 2
 
-            // Calculate amounts
             const finalPrice = winningBid.amount
             const buyerCommission = Math.round(finalPrice * (buyerCommissionRate / 100))
             const sellerCommission = Math.round(finalPrice * (sellerCommissionRate / 100))
-            const shippingCost = 0 // To be determined later
+            const shippingCost = 0
             const totalAmount = finalPrice + buyerCommission + shippingCost
             const sellerAmount = finalPrice - sellerCommission
 
@@ -148,9 +141,8 @@ export async function POST(request: NextRequest) {
             })
 
             transactionsCreatedCount++
-            console.log(`✅ Transaction créée pour ${object.name} (${object.id}) - Gagnant: ${buyerId}`)
+            console.log(`Transaction created for ${object.name} (${object.id}) - Winner: ${buyerId}`)
 
-            // Update object status
             await payload.update({
               collection: 'objects',
               id: object.id,
@@ -160,18 +152,16 @@ export async function POST(request: NextRequest) {
               },
             })
 
-            // Send email notifications
+            /** Send email notifications to winner and losers */
             try {
               const { auctionWonTemplate, auctionLostTemplate, sendEmail } = await import('@/lib/email/templates')
               const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000'
 
-              // Get winner details
               const winner = await payload.findByID({
                 collection: 'users',
-                id: buyerId as string,
+                id: buyerId,
               })
 
-              // Email to winner
               const winnerHtml = auctionWonTemplate({
                 objectName: object.name,
                 objectUrl: `${appUrl}/objets/${object.id}`,
@@ -181,7 +171,6 @@ export async function POST(request: NextRequest) {
               })
               await sendEmail(winner.email, 'Félicitations ! Vous avez remporté l\'enchère', winnerHtml)
 
-              // Email to other bidders (losers)
               const allBids = await payload.find({
                 collection: 'bids',
                 where: {
@@ -192,11 +181,17 @@ export async function POST(request: NextRequest) {
 
               const loserEmails = new Set<string>()
               for (const bid of allBids.docs) {
-                const bidderId = typeof bid.bidder === 'string' ? bid.bidder : bid.bidder?.id
+                const bidderId = typeof bid.bidder === 'string'
+                  ? bid.bidder
+                  : typeof bid.bidder === 'number'
+                    ? bid.bidder
+                    : typeof bid.bidder === 'object'
+                      ? bid.bidder?.id
+                      : null
                 if (bidderId && bidderId !== buyerId) {
                   const bidder = await payload.findByID({
                     collection: 'users',
-                    id: bidderId as string,
+                    id: bidderId,
                   })
                   loserEmails.add(bidder.email)
                 }
@@ -219,15 +214,13 @@ export async function POST(request: NextRequest) {
               }
             } catch (emailError) {
               console.error('Error sending auction emails:', emailError)
-              // Don't fail the cron if email fails
             }
           }
         }
 
         processedCount++
       } catch (error) {
-        console.error(`Erreur lors du traitement de l'objet ${object.id}:`, error)
-        // Continue processing other auctions even if one fails
+        console.error(`Error processing object ${object.id}:`, error)
       }
     }
 
@@ -241,11 +234,11 @@ export async function POST(request: NextRequest) {
       totalFound: expiredAuctions.totalDocs,
     }
 
-    console.log('📊 Cron finalize-auctions terminé:', summary)
+    console.log('Cron finalize-auctions completed:', summary)
 
     return NextResponse.json(summary, { status: 200 })
   } catch (error) {
-    console.error('Erreur cron finalize-auctions:', error)
+    console.error('Error in cron finalize-auctions:', error)
     return NextResponse.json(
       {
         error: 'Internal Server Error',

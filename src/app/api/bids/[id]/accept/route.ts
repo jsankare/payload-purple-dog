@@ -4,12 +4,7 @@ import { getPayload } from 'payload'
 
 /**
  * POST /api/bids/[id]/accept
- * 
- * Accept a bid manually (seller only)
- * - Creates transaction
- * - Marks object as sold
- * - Rejects all other bids
- * - Sends emails to winner and losers
+ * Accept bid manually (seller only) - creates transaction, marks sold, notifies users
  */
 export async function POST(
   request: NextRequest,
@@ -19,7 +14,6 @@ export async function POST(
     const payload = await getPayload({ config: configPromise })
     const { id } = await params
 
-    // Get authenticated user
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -29,7 +23,6 @@ export async function POST(
       )
     }
 
-    // Fetch bid
     const bid = await payload.findByID({
       collection: 'bids',
       id,
@@ -43,13 +36,16 @@ export async function POST(
       )
     }
 
-    // Get object
-    const object = typeof bid.object === 'object' ? bid.object : await payload.findByID({
-      collection: 'objects',
-      id: bid.object as string,
-    })
+    let object
+    if (typeof bid.object === 'string') {
+      object = await payload.findByID({
+        collection: 'objects',
+        id: bid.object,
+      })
+    } else {
+      object = bid.object
+    }
 
-    // Verify user is the seller
     const sellerId = typeof object.seller === 'string' ? object.seller : object.seller?.id
 
     if (user.role !== 'admin' && user.id !== sellerId) {
@@ -59,7 +55,6 @@ export async function POST(
       )
     }
 
-    // Check if object is still available
     if (object.status !== 'active') {
       return NextResponse.json(
         { error: 'Object is no longer available' },
@@ -67,15 +62,12 @@ export async function POST(
       )
     }
 
-    // Get buyer ID
-    const buyerId = typeof bid.bidder === 'string' ? bid.bidder : bid.bidder?.id
+    const buyerId = typeof bid.bidder === 'number' ? bid.bidder : (typeof bid.bidder === 'string' ? bid.bidder : bid.bidder?.id)
 
-    // Get commission rates
     const settings = await payload.findGlobal({ slug: 'settings' })
     const buyerCommissionRate = settings.globalBuyerCommission || 3
     const sellerCommissionRate = settings.globalSellerCommission || 2
 
-    // Calculate amounts
     const finalPrice = bid.amount
     const buyerCommission = Math.round(finalPrice * (buyerCommissionRate / 100))
     const sellerCommission = Math.round(finalPrice * (sellerCommissionRate / 100))
@@ -83,7 +75,6 @@ export async function POST(
     const totalAmount = finalPrice + buyerCommission + shippingCost
     const sellerAmount = finalPrice - sellerCommission
 
-    // Create transaction
     const transaction = await payload.create({
       collection: 'transactions',
       data: {
@@ -102,7 +93,6 @@ export async function POST(
       overrideAccess: true,
     })
 
-    // Update object status
     await payload.update({
       collection: 'objects',
       id: object.id,
@@ -113,7 +103,6 @@ export async function POST(
       overrideAccess: true,
     })
 
-    // Get all other bids for this object
     const allBids = await payload.find({
       collection: 'bids',
       where: {
@@ -122,18 +111,16 @@ export async function POST(
       },
     })
 
-    // Send email notifications
+    /** Send email notifications to winner and losers */
     try {
       const { auctionWonTemplate, auctionLostTemplate, sendEmail } = await import('@/lib/email/templates')
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000'
 
-      // Get winner details
       const winner = await payload.findByID({
         collection: 'users',
-        id: buyerId as string,
+        id: buyerId,
       })
 
-      // Email to winner
       const winnerHtml = auctionWonTemplate({
         objectName: object.name,
         objectUrl: `${appUrl}/objets/${object.id}`,
@@ -143,14 +130,13 @@ export async function POST(
       })
       await sendEmail(winner.email, 'Félicitations ! Vous avez remporté l\'enchère', winnerHtml)
 
-      // Email to losers
       const loserEmails = new Set<string>()
       for (const loserBid of allBids.docs) {
-        const loserId = typeof loserBid.bidder === 'string' ? loserBid.bidder : loserBid.bidder?.id
+        const loserId = typeof loserBid.bidder === 'number' ? loserBid.bidder : (typeof loserBid.bidder === 'string' ? loserBid.bidder : loserBid.bidder?.id)
         if (loserId) {
           const loser = await payload.findByID({
             collection: 'users',
-            id: loserId as string,
+            id: loserId,
           })
           loserEmails.add(loser.email)
         }

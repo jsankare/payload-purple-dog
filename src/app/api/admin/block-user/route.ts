@@ -3,17 +3,18 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 
 /**
- * Route pour bloquer/débloquer un utilisateur (Admin uniquement)
  * POST /api/admin/block-user
- * Body: { userId: number, action: 'block' | 'unblock' }
+ * Block/unblock user (Admin only)
+ * @param userId - User ID to block/unblock
+ * @param action - 'block' or 'unblock'
  */
+
 export async function POST(req: NextRequest) {
   try {
     const payload = await getPayload({ config })
-    
-    // Vérifier l'authentification
+
     const { user } = await payload.auth({ headers: req.headers })
-    
+
     if (!user) {
       return NextResponse.json(
         { error: 'Non authentifié' },
@@ -21,7 +22,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Vérifier que l'utilisateur est admin
     if (user.role !== 'admin') {
       return NextResponse.json(
         { error: 'Accès refusé. Admin uniquement.' },
@@ -32,7 +32,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { userId, action } = body
 
-    // Validation
     if (!userId || !action) {
       return NextResponse.json(
         { error: 'userId et action sont requis' },
@@ -47,7 +46,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Vérifier que l'utilisateur existe
     const targetUser = await payload.findByID({
       collection: 'users',
       id: userId,
@@ -60,7 +58,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Empêcher de bloquer un admin
+    /** Prevent blocking admins */
     if (targetUser.role === 'admin') {
       return NextResponse.json(
         { error: 'Vous ne pouvez pas bloquer un administrateur' },
@@ -68,7 +66,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Empêcher de se bloquer soi-même
+    /** Prevent self-blocking */
     if (targetUser.id === user.id) {
       return NextResponse.json(
         { error: 'Vous ne pouvez pas vous bloquer vous-même' },
@@ -76,10 +74,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Déterminer le nouveau statut
     const newStatus = action === 'block' ? 'suspended' : 'active'
 
-    // Mettre à jour le statut
     const updatedUser = await payload.update({
       collection: 'users',
       id: userId,
@@ -88,14 +84,14 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Si on bloque, déconnecter l'utilisateur (supprimer ses sessions)
+    /** Clear user sessions when blocking */
     if (action === 'block') {
       try {
         await payload.update({
           collection: 'users',
           id: userId,
           data: {
-            sessions: [], // Vider les sessions
+            sessions: [],
           },
         })
       } catch (error) {
@@ -105,8 +101,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: action === 'block' 
-        ? `Utilisateur ${targetUser.email} bloqué avec succès` 
+      message: action === 'block'
+        ? `Utilisateur ${targetUser.email} bloqué avec succès`
         : `Utilisateur ${targetUser.email} débloqué avec succès`,
       user: {
         id: updatedUser.id,

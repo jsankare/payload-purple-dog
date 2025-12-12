@@ -15,7 +15,6 @@ export async function POST(
     const payload = await getPayload({ config: configPromise })
     const { id } = await params
 
-    // Get authenticated user
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -25,7 +24,6 @@ export async function POST(
       )
     }
 
-    // Fetch offer
     const offer = await payload.findByID({
       collection: 'offers',
       id,
@@ -39,14 +37,12 @@ export async function POST(
       )
     }
 
-    // Get object
     const object = typeof offer.object === 'object' ? offer.object : await payload.findByID({
       collection: 'objects',
-      id: offer.object as string,
+      id: offer.object,
     })
 
-    // Verify user is the seller
-    const sellerId = typeof object.seller === 'string' ? object.seller : object.seller?.id
+    const sellerId = typeof object.seller === 'object' ? object.seller?.id : object.seller
 
     if (user.role !== 'admin' && user.id !== sellerId) {
       return NextResponse.json(
@@ -55,7 +51,6 @@ export async function POST(
       )
     }
 
-    // Validate offer status
     if (offer.status !== 'pending') {
       return NextResponse.json(
         { error: 'This offer has already been processed' },
@@ -63,7 +58,6 @@ export async function POST(
       )
     }
 
-    // Mark offer as rejected
     const updatedOffer = await payload.update({
       collection: 'offers',
       id: offer.id,
@@ -73,13 +67,13 @@ export async function POST(
       overrideAccess: true,
     })
 
-    // Send email notification to buyer
+    /** Send email notification to buyer */
     try {
-      const buyerId = typeof offer.buyer === 'string' ? offer.buyer : offer.buyer?.id
+      const buyerId = typeof offer.buyer === 'object' ? offer.buyer?.id : offer.buyer
 
       const buyer = await payload.findByID({
         collection: 'users',
-        id: buyerId as string,
+        id: buyerId,
       })
 
       const { sendEmail } = await import('@/lib/email/templates')

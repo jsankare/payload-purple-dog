@@ -36,13 +36,11 @@ export default buildConfig({
     dateFormat: 'd MMMM yyyy, HH:mm',
   },
   cors: [
-    'http://localhost:3001',
     'http://localhost:3000',
     'http://localhost:4000',
     process.env.NEXT_PUBLIC_FRONTEND_URL || '',
   ].filter(Boolean),
   csrf: [
-    'http://localhost:3001',
     'http://localhost:3000',
     'http://localhost:4000',
     process.env.NEXT_PUBLIC_FRONTEND_URL || '',

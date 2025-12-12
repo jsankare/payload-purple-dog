@@ -3,30 +3,27 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 
 /**
- * Route pour mettre à jour le profil utilisateur
- * PUT /api/profile/update
- * PATCH /api/profile/update
+ * PUT/PATCH /api/profile/update
+ * Update user profile
  */
 async function updateProfile(req: NextRequest) {
   try {
     const payload = await getPayload({ config })
-    
-    // Récupérer l'utilisateur authentifié depuis les headers
+
     const token = req.headers.get('authorization')?.replace('Bearer ', '')
-    
+
     if (!token) {
       return NextResponse.json(
-        { error: 'Non authentifié' },
+        { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    // Vérifier l'utilisateur avec le token
     const { user } = await payload.auth({ headers: req.headers })
-    
+
     if (!user) {
       return NextResponse.json(
-        { error: 'Utilisateur non trouvé' },
+        { error: 'User not found' },
         { status: 401 }
       )
     }
@@ -44,16 +41,13 @@ async function updateProfile(req: NextRequest) {
       bankInfo,
     } = body
 
-    // Préparer les données à mettre à jour selon le rôle
     const updateData: any = {}
 
-    // Champs communs
     if (firstName !== undefined) updateData.firstName = firstName
     if (lastName !== undefined) updateData.lastName = lastName
     if (address !== undefined) updateData.address = address
     if (newsletterSubscription !== undefined) updateData.newsletterSubscription = newsletterSubscription
 
-    // Coordonnées bancaires (disponible pour tous)
     if (bankInfo !== undefined) {
       updateData.bankDetails = {
         iban: bankInfo.iban || '',
@@ -62,7 +56,6 @@ async function updateProfile(req: NextRequest) {
       }
     }
 
-    // Champs pour professionnels
     if (user.role === 'professionnel') {
       if (companyName !== undefined) updateData.companyName = companyName
       if (siret !== undefined) updateData.siret = siret
@@ -70,7 +63,6 @@ async function updateProfile(req: NextRequest) {
       if (socialMedia !== undefined) updateData.socialMedia = socialMedia
     }
 
-    // Mettre à jour l'utilisateur
     const updatedUser = await payload.update({
       collection: 'users',
       id: user.id,
@@ -79,7 +71,7 @@ async function updateProfile(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Profil mis à jour avec succès',
+      message: 'Profile updated successfully',
       user: {
         id: updatedUser.id,
         email: updatedUser.email,
@@ -91,9 +83,9 @@ async function updateProfile(req: NextRequest) {
       },
     })
   } catch (error: any) {
-    console.error('Erreur mise à jour profil:', error)
+    console.error('Error updating profile:', error)
     return NextResponse.json(
-      { error: 'Erreur lors de la mise à jour du profil', details: error.message },
+      { error: 'Failed to update profile', details: error.message },
       { status: 500 }
     )
   }

@@ -4,10 +4,8 @@ import { getPayload } from 'payload'
 
 /**
  * POST /api/objects/[id]/purchase
- * 
  * Purchase an object in quick sale mode
  * Creates a transaction immediately
- * 
  * For quick sale objects only
  */
 export async function POST(
@@ -18,7 +16,6 @@ export async function POST(
     const { id } = await params
     const payload = await getPayload({ config: configPromise })
 
-    // Get authenticated user
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -28,7 +25,6 @@ export async function POST(
       )
     }
 
-    // Only professionals can purchase
     if (user.role !== 'professionnel') {
       return NextResponse.json(
         { error: 'Only professionals can purchase objects' },
@@ -36,7 +32,6 @@ export async function POST(
       )
     }
 
-    // Verify user has valid payment method
     if (!user.hasValidPaymentMethod) {
       return NextResponse.json(
         {
@@ -47,7 +42,6 @@ export async function POST(
       )
     }
 
-    // Fetch object
     const object = await payload.findByID({
       collection: 'objects',
       id,
@@ -61,7 +55,6 @@ export async function POST(
       )
     }
 
-    // Verify object is in quick sale mode
     if (object.saleMode !== 'quick_sale') {
       return NextResponse.json(
         { error: 'This object is not in quick sale mode' },
@@ -69,7 +62,6 @@ export async function POST(
       )
     }
 
-    // Verify object is active
     if (object.status !== 'active') {
       return NextResponse.json(
         { error: 'This object is not available for purchase' },
@@ -77,10 +69,8 @@ export async function POST(
       )
     }
 
-    // Get seller ID
     const sellerId = typeof object.seller === 'object' ? object.seller.id : object.seller
 
-    // Verify user is not the seller
     if (user.id === sellerId) {
       return NextResponse.json(
         { error: 'You cannot purchase your own object' },
@@ -88,7 +78,6 @@ export async function POST(
       )
     }
 
-    // Check if transaction already exists
     const existingTransaction = await payload.find({
       collection: 'transactions',
       where: {
@@ -106,20 +95,18 @@ export async function POST(
       )
     }
 
-    // Get commissions (default to 3% buyer, 2% seller)
     const buyerCommissionRate = 0.03
     const sellerCommissionRate = 0.02
 
     const finalPrice = object.quickSalePrice || 0
     const buyerCommission = finalPrice * buyerCommissionRate
     const sellerCommission = finalPrice * sellerCommissionRate
-    const shippingCost = 0 // Will be set during checkout
+    const shippingCost = 0
     const totalAmount = finalPrice + buyerCommission + shippingCost
     const sellerAmount = finalPrice - sellerCommission
 
-    // Prepare addresses from user profile (if available)
-    const userAddress = user.address || {}
-    const addressData = userAddress.street ? {
+    const userAddress = user.address
+    const addressData = userAddress?.street ? {
       shippingAddress: {
         street: userAddress.street || '',
         city: userAddress.city || '',
@@ -134,7 +121,6 @@ export async function POST(
       },
     } : {}
 
-    // Create transaction (addresses will be filled during checkout)
     const transaction = await payload.create({
       collection: 'transactions',
       data: {
@@ -155,7 +141,6 @@ export async function POST(
       overrideAccess: true,
     })
 
-    // Update object status to sold
     await payload.update({
       collection: 'objects',
       id: object.id,
@@ -165,7 +150,6 @@ export async function POST(
       overrideAccess: true,
     })
 
-    // Send emails to buyer and seller
     try {
       const { purchaseConfirmationTemplate, sellerNotificationTemplate, sendEmail } = await import('@/lib/email/templates')
 
@@ -173,7 +157,6 @@ export async function POST(
       const objectUrl = `${appUrl}/objets/${object.id}`
       const checkoutUrl = `${appUrl}/checkout/${transaction.id}`
 
-      // Email to buyer
       const buyerHtml = purchaseConfirmationTemplate({
         objectName: object.name,
         objectUrl,
@@ -183,7 +166,6 @@ export async function POST(
       })
       await sendEmail(user.email, 'Achat confirmé - Procédez au paiement', buyerHtml)
 
-      // Email to seller
       const seller = await payload.findByID({
         collection: 'users',
         id: sellerId,
@@ -193,12 +175,11 @@ export async function POST(
         objectUrl,
         salePrice: finalPrice,
         sellerName: `${seller.firstName} ${seller.lastName}`,
-        buyerName: user.firstName, // Only first name for privacy
+        buyerName: user.firstName,
       })
       await sendEmail(seller.email, 'Votre objet a été vendu !', sellerHtml)
     } catch (emailError) {
       console.error('Error sending purchase emails:', emailError)
-      // Don't fail the purchase if email fails
     }
 
     return NextResponse.json({

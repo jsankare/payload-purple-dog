@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
-  // Handle CORS preflight requests
   if (request.method === 'OPTIONS') {
     return new NextResponse(null, {
       status: 200,
@@ -16,12 +15,10 @@ export function middleware(request: NextRequest) {
     })
   }
 
-  // Add CORS headers to all responses
   const response = NextResponse.next()
 
   const origin = request.headers.get('origin')
   const allowedOrigins = [
-    'http://localhost:3001',
     'http://localhost:3000',
     'http://localhost:4000',
     process.env.NEXT_PUBLIC_FRONTEND_URL,
@@ -37,7 +34,6 @@ export function middleware(request: NextRequest) {
   return response
 }
 
-// Apply middleware to API routes only
 export const config = {
   matcher: '/api/:path*',
 }
