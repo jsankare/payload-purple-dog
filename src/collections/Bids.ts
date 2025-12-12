@@ -19,14 +19,14 @@ export const Bids: CollectionConfig = {
   defaultSort: '-createdAt',
   access: {
     // Lecture: utilisateurs authentifiés uniquement
-    read: ({ req: { user } }) => {
-      return !!user
+    read: ({ req }) => {
+      return !!req.user
     },
 
     // Création: uniquement professionnels
-    create: ({ req: { user } }) => {
-      console.log('Bid Create Access Check - User:', user?.email, 'Role:', user?.role)
-      return user?.role === 'professionnel'
+    create: ({ req }) => {
+      console.log('Bid Create Access Check - User:', req.user?.email, 'Role:', req.user?.role)
+      return req.user?.role === 'professionnel'
     },
 
     // Mise à jour et suppression désactivées pour MVP

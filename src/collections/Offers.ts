@@ -19,8 +19,8 @@ export const Offers: CollectionConfig = {
   defaultSort: '-createdAt',
   access: {
     // Création: pros avec abonnement actif uniquement
-    create: ({ req: { user } }) => {
-      return user?.role === 'professionnel' && user?.subscriptionStatus === 'active'
+    create: ({ req }) => {
+      return req.user?.role === 'professionnel' && req.user?.subscriptionStatus === 'active'
     },
 
     // Lecture: admin tout voir, sinon seulement ses propres offres
@@ -37,8 +37,8 @@ export const Offers: CollectionConfig = {
     },
 
     // Mise à jour: admin uniquement
-    update: ({ req: { user } }) => {
-      return user?.role === 'admin'
+    update: ({ req }) => {
+      return req.user?.role === 'admin'
     },
 
     // Suppression: désactivée

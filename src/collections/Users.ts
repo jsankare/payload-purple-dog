@@ -10,25 +10,25 @@ export const Users: CollectionConfig = {
     // Permettre la création de compte (inscription) sans authentification
     create: () => true,
     // Seuls les utilisateurs authentifiés peuvent lire
-    read: ({ req: { user } }) => {
+    read: ({ req }) => {
       // Les admins peuvent tout voir
-      if (user?.role === 'admin') return true
+      if (req.user?.role === 'admin') return true
       // Les utilisateurs peuvent voir leur propre profil
-      if (user) {
+      if (req.user) {
         return {
           id: {
-            equals: user.id,
+            equals: req.user.id,
           },
         }
       }
       return false
     },
     // Les utilisateurs peuvent mettre à jour leur propre profil
-    update: ({ req: { user } }) => {
-      if (user) {
+    update: ({ req }) => {
+      if (req.user) {
         return {
           id: {
-            equals: user.id,
+            equals: req.user.id,
           },
         }
       }

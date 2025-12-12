@@ -9,21 +9,21 @@ export const Subscriptions: CollectionConfig = {
   },
   access: {
     // Les utilisateurs peuvent voir leurs propres abonnements, les admins voient tout
-    read: ({ req: { user } }) => {
-      if (user?.role === 'admin') return true
-      if (user) {
+    read: ({ req }) => {
+      if (req.user?.role === 'admin') return true
+      if (req.user) {
         return {
           user: {
-            equals: user.id,
+            equals: req.user.id,
           },
         }
       }
       return false
     },
     // Seuls les admins peuvent créer/modifier/supprimer
-    create: ({ req: { user } }) => user?.role === 'admin',
-    update: ({ req: { user } }) => user?.role === 'admin',
-    delete: ({ req: { user } }) => user?.role === 'admin',
+    create: ({ req }) => req.user?.role === 'admin',
+    update: ({ req }) => req.user?.role === 'admin',
+    delete: ({ req }) => req.user?.role === 'admin',
   },
   fields: [
     {

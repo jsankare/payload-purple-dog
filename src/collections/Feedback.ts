@@ -8,40 +8,40 @@ export const Feedback: CollectionConfig = {
   },
   access: {
     // Les utilisateurs authentifiés peuvent créer des avis
-    create: ({ req: { user } }) => !!user,
-    
+    create: ({ req }) => !!req.user,
+
     // Les admins voient tout, les utilisateurs voient leurs propres avis
-    read: ({ req: { user } }) => {
-      if (!user) return false
-      if (user.role === 'admin') return true
-      
+    read: ({ req }) => {
+      if (!req.user) return false
+      if (req.user.role === 'admin') return true
+
       return {
         user: {
-          equals: user.id,
+          equals: req.user.id,
         },
       }
     },
-    
+
     // Un utilisateur ne peut modifier que ses propres avis
-    update: ({ req: { user } }) => {
-      if (!user) return false
-      if (user.role === 'admin') return true
-      
+    update: ({ req }) => {
+      if (!req.user) return false
+      if (req.user.role === 'admin') return true
+
       return {
         user: {
-          equals: user.id,
+          equals: req.user.id,
         },
       }
     },
-    
+
     // Un utilisateur ne peut supprimer que ses propres avis
-    delete: ({ req: { user } }) => {
-      if (!user) return false
-      if (user.role === 'admin') return true
-      
+    delete: ({ req }) => {
+      if (!req.user) return false
+      if (req.user.role === 'admin') return true
+
       return {
         user: {
-          equals: user.id,
+          equals: req.user.id,
         },
       }
     },

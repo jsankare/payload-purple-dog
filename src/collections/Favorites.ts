@@ -19,32 +19,32 @@ export const Favorites: CollectionConfig = {
   defaultSort: '-createdAt',
   access: {
     // Création: utilisateurs authentifiés uniquement
-    create: ({ req: { user } }) => {
-      return !!user
+    create: ({ req }) => {
+      return !!req.user
     },
 
     // Lecture: admin tout voir, sinon seulement ses propres favoris
-    read: ({ req: { user } }) => {
-      if (!user) return false
-      if (user.role === 'admin') return true
+    read: ({ req }) => {
+      if (!req.user) return false
+      if (req.user.role === 'admin') return true
 
       // Utilisateur ne voit que ses favoris
       return {
         user: {
-          equals: user.id,
+          equals: req.user.id,
         },
       }
     },
 
     // Suppression: admin tout supprimer, sinon seulement ses propres favoris
-    delete: ({ req: { user } }) => {
-      if (!user) return false
-      if (user.role === 'admin') return true
+    delete: ({ req }) => {
+      if (!req.user) return false
+      if (req.user.role === 'admin') return true
 
       // Utilisateur ne peut supprimer que ses favoris
       return {
         user: {
-          equals: user.id,
+          equals: req.user.id,
         },
       }
     },

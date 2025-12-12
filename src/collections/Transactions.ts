@@ -19,9 +19,9 @@ export const Transactions: CollectionConfig = {
   defaultSort: '-createdAt',
   access: {
     // Création: admin ou système (via overrideAccess)
-    create: ({ req: { user } }) => {
+    create: ({ req }) => {
       // Admin peut créer manuellement
-      if (user?.role === 'admin') return true
+      if (req.user?.role === 'admin') return true
       // Système peut créer via overrideAccess
       return false
     },
@@ -41,8 +41,8 @@ export const Transactions: CollectionConfig = {
     },
 
     // Mise à jour: admin uniquement
-    update: ({ req: { user } }) => {
-      return user?.role === 'admin'
+    update: ({ req }) => {
+      return req.user?.role === 'admin'
     },
 
     // Suppression: désactivée

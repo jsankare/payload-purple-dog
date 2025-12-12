@@ -11,9 +11,9 @@ export const Plans: CollectionConfig = {
     // Tous peuvent lire les forfaits
     read: () => true,
     // Seuls les admins peuvent créer/modifier/supprimer
-    create: ({ req: { user } }) => user?.role === 'admin',
-    update: ({ req: { user } }) => user?.role === 'admin',
-    delete: ({ req: { user } }) => user?.role === 'admin',
+    create: ({ req }) => req.user?.role === 'admin',
+    update: ({ req }) => req.user?.role === 'admin',
+    delete: ({ req }) => req.user?.role === 'admin',
   },
   fields: [
     {

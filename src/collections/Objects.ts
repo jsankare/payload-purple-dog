@@ -6,6 +6,22 @@ export const Objects: CollectionConfig = {
   admin: {
     useAsTitle: 'name',
   },
+  access: {
+    read: () => true,
+    create: ({ req }) => !!req.user,
+    update: ({ req }) => {
+      if (req.user?.role === 'admin') return true
+      return {
+        seller: { equals: req.user?.id },
+      }
+    },
+    delete: ({ req }) => {
+      if (req.user?.role === 'admin') return true
+      return {
+        seller: { equals: req.user?.id },
+      }
+    },
+  },
   labels: {
     singular: { en: 'Object', fr: 'Objet' },
     plural: { en: 'Objects', fr: 'Objets' },

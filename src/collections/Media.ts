@@ -3,10 +3,10 @@ import type { CollectionConfig } from 'payload'
 export const Media: CollectionConfig = {
   slug: 'media',
   access: {
-    create: () => true,  // Permettre l'upload sans authentification
     read: () => true,
-    update: () => true,
-    delete: () => false,
+    create: ({ req }) => !!req.user,
+    update: ({ req }) => req.user?.role === 'admin',
+    delete: ({ req }) => req.user?.role === 'admin',
   },
   fields: [
     {

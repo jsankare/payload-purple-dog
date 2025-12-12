@@ -22,15 +22,9 @@ export const Categories: CollectionConfig = {
     read: () => true,
 
     // Seuls les admins peuvent créer/modifier/supprimer
-    create: ({ req: { user } }) => {
-      return user?.role === 'admin'
-    },
-    update: ({ req: { user } }) => {
-      return user?.role === 'admin'
-    },
-    delete: ({ req: { user } }) => {
-      return user?.role === 'admin'
-    },
+    create: ({ req }) => req.user?.role === 'admin',
+    update: ({ req }) => req.user?.role === 'admin',
+    delete: ({ req }) => req.user?.role === 'admin',
   },
   fields: [
     {
