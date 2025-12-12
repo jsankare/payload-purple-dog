@@ -92,6 +92,10 @@ export async function POST(request: NextRequest) {
     const favorite = existing.docs[0]
     let createdFavorite = null
 
+    // Convert objectId to number (comes from frontend as string)
+    const objectIdNum = typeof objectId === 'string' ? parseInt(objectId, 10) : objectId
+    const userIdNum = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id
+
     // Toggle favorite
     if (favorite) {
       // Remove favorite
@@ -104,8 +108,8 @@ export async function POST(request: NextRequest) {
       createdFavorite = await payload.create({
         collection: 'favorites',
         data: {
-          user: user.id,
-          object: objectId,
+          user: userIdNum,
+          object: objectIdNum,
         },
       })
     }

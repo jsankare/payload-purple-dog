@@ -74,16 +74,11 @@ export interface Config {
     posts: Post;
     objects: Object;
     feedback: Feedback;
-<<<<<<< HEAD
     categories: Category;
     bids: Bid;
     offers: Offer;
     favorites: Favorite;
     transactions: Transaction;
-=======
-    objects: Object;
-    bids: Bid;
->>>>>>> origin/develop
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -98,16 +93,11 @@ export interface Config {
     posts: PostsSelect<false> | PostsSelect<true>;
     objects: ObjectsSelect<false> | ObjectsSelect<true>;
     feedback: FeedbackSelect<false> | FeedbackSelect<true>;
-<<<<<<< HEAD
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     bids: BidsSelect<false> | BidsSelect<true>;
     offers: OffersSelect<false> | OffersSelect<true>;
     favorites: FavoritesSelect<false> | FavoritesSelect<true>;
     transactions: TransactionsSelect<false> | TransactionsSelect<true>;
-=======
-    objects: ObjectsSelect<false> | ObjectsSelect<true>;
-    bids: BidsSelect<false> | BidsSelect<true>;
->>>>>>> origin/develop
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -460,90 +450,11 @@ export interface Feedback {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
-<<<<<<< HEAD
-=======
- * via the `definition` "objects".
- */
-export interface Object {
-  id: number;
-  name: string;
-  category:
-    | 'bijoux-montres'
-    | 'meubles-anciens'
-    | 'objets-art-tableaux'
-    | 'objets-collection'
-    | 'vins-spiritueux'
-    | 'instruments-musique'
-    | 'livres-manuscrits'
-    | 'mode-luxe'
-    | 'horlogerie-pendules'
-    | 'photographies-vintage'
-    | 'vaisselle-argenterie'
-    | 'sculptures-decoratifs'
-    | 'vehicules-collection';
-  description: string;
-  dimensions: {
-    length: number;
-    width: number;
-    height: number;
-    weight: number;
-  };
-  /**
-   * Certificats d'authenticité, preuves d'achat, etc.
-   */
-  documents?:
-    | {
-        document: number | Media;
-        description?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  /**
-   * Minimum 10 photos, maximum 20
-   */
-  photos: {
-    photo: number | Media;
-    id?: string | null;
-  }[];
-  /**
-   * Prix que vous souhaitez obtenir
-   */
-  price: number;
-  saleMode: 'auction' | 'quick-sale';
-  auctionConfig?: {
-    /**
-     * Par défaut : -10% du prix souhaité
-     */
-    startingPrice?: number | null;
-    /**
-     * Prix minimum pour vendre
-     */
-    reservePrice?: number | null;
-    duration?: number | null;
-    startDate?: string | null;
-    endDate?: string | null;
-    currentBid?: number | null;
-    bidCount?: number | null;
-  };
-  seller: number | User;
-  status: 'draft' | 'pending' | 'active' | 'sold' | 'withdrawn' | 'rejected' | 'expired';
-  buyer?: (number | null) | User;
-  soldPrice?: number | null;
-  soldDate?: string | null;
-  views?: number | null;
-  favorites?: number | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
->>>>>>> origin/develop
  * via the `definition` "bids".
  */
 export interface Bid {
   id: number;
   object: number | Object;
-<<<<<<< HEAD
   /**
    * Automatically set to current user
    */
@@ -603,9 +514,6 @@ export interface Offer {
  */
 export interface Favorite {
   id: number;
-  /**
-   * Automatically set to current user
-   */
   user: number | User;
   object: number | Object;
   /**
@@ -707,22 +615,6 @@ export interface Transaction {
    */
   createdAt: string;
   updatedAt: string;
-=======
-  bidder: number | User;
-  amount: number;
-  bidType: 'manual' | 'automatic';
-  /**
-   * Si enchère automatique, montant maximum à enchérir
-   */
-  maxAutoBid?: number | null;
-  status: 'active' | 'outbid' | 'winning' | 'lost';
-  /**
-   * Email de notification envoyé à l'enchérisseur
-   */
-  notified?: boolean | null;
-  updatedAt: string;
-  createdAt: string;
->>>>>>> origin/develop
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -777,18 +669,12 @@ export interface PayloadLockedDocument {
         value: number | Feedback;
       } | null)
     | ({
-<<<<<<< HEAD
         relationTo: 'categories';
         value: number | Category;
-=======
-        relationTo: 'objects';
-        value: number | Object;
->>>>>>> origin/develop
       } | null)
     | ({
         relationTo: 'bids';
         value: number | Bid;
-<<<<<<< HEAD
       } | null)
     | ({
         relationTo: 'offers';
@@ -801,8 +687,6 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'transactions';
         value: number | Transaction;
-=======
->>>>>>> origin/develop
       } | null);
   globalSlug?: string | null;
   user: {
@@ -1048,7 +932,6 @@ export interface FeedbackSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
-<<<<<<< HEAD
  * via the `definition` "categories_select".
  */
 export interface CategoriesSelect<T extends boolean = true> {
@@ -1056,55 +939,6 @@ export interface CategoriesSelect<T extends boolean = true> {
   slug?: T;
   description?: T;
   active?: T;
-=======
- * via the `definition` "objects_select".
- */
-export interface ObjectsSelect<T extends boolean = true> {
-  name?: T;
-  category?: T;
-  description?: T;
-  dimensions?:
-    | T
-    | {
-        length?: T;
-        width?: T;
-        height?: T;
-        weight?: T;
-      };
-  documents?:
-    | T
-    | {
-        document?: T;
-        description?: T;
-        id?: T;
-      };
-  photos?:
-    | T
-    | {
-        photo?: T;
-        id?: T;
-      };
-  price?: T;
-  saleMode?: T;
-  auctionConfig?:
-    | T
-    | {
-        startingPrice?: T;
-        reservePrice?: T;
-        duration?: T;
-        startDate?: T;
-        endDate?: T;
-        currentBid?: T;
-        bidCount?: T;
-      };
-  seller?: T;
-  status?: T;
-  buyer?: T;
-  soldPrice?: T;
-  soldDate?: T;
-  views?: T;
-  favorites?: T;
->>>>>>> origin/develop
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1116,7 +950,6 @@ export interface BidsSelect<T extends boolean = true> {
   object?: T;
   bidder?: T;
   amount?: T;
-<<<<<<< HEAD
   maxAutoBidAmount?: T;
   status?: T;
   source?: T;
@@ -1190,14 +1023,6 @@ export interface TransactionsSelect<T extends boolean = true> {
   notes?: T;
   createdAt?: T;
   updatedAt?: T;
-=======
-  bidType?: T;
-  maxAutoBid?: T;
-  status?: T;
-  notified?: T;
-  updatedAt?: T;
-  createdAt?: T;
->>>>>>> origin/develop
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

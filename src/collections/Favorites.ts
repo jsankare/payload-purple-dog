@@ -62,13 +62,6 @@ export const Favorites: CollectionConfig = {
         en: 'User',
         fr: 'Utilisateur',
       },
-      admin: {
-        readOnly: true,
-        description: {
-          en: 'Automatically set to current user',
-          fr: 'Défini automatiquement sur l\'utilisateur actuel',
-        },
-      },
     },
     {
       name: 'object',
@@ -94,15 +87,4 @@ export const Favorites: CollectionConfig = {
       },
     },
   ],
-  hooks: {
-    beforeValidate: [
-      async ({ data, req, operation }) => {
-        if (operation === 'create' && data) {
-          // Auto-définir le user sur l'utilisateur actuel
-          data.user = req.user?.id
-        }
-        return data
-      },
-    ],
-  },
 }
