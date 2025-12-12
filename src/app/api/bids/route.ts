@@ -18,14 +18,21 @@ export async function POST(request: NextRequest) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Get authenticated user
-    // @ts-ignore - Payload injects user in request context
-    const user = request.user
+    // Get authenticated user using Payload auth
+    const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
+      )
+    }
+
+    // Verify user has permission to bid (professionals only)
+    if (user.role !== 'professionnel') {
+      return NextResponse.json(
+        { error: 'Only professionals can place bids' },
+        { status: 403 }
       )
     }
 
