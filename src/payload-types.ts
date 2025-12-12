@@ -198,6 +198,7 @@ export interface User {
   accountStatus?: ('pending' | 'active' | 'suspended' | 'rejected') | null;
   currentSubscription?: (number | null) | Subscription;
   subscriptionStatus?: ('active' | 'trialing' | 'suspended' | 'canceled' | 'expired' | 'restricted') | null;
+  subscriptionEndDate?: string | null;
   stripeCustomerId?: string | null;
   stripeSubscriptionId?: string | null;
   /**
@@ -274,7 +275,7 @@ export interface Subscription {
    * L'abonnement sera automatiquement renouvelé à la fin de la période
    */
   autoRenew?: boolean | null;
-  paymentMethod?: ('card' | 'paypal' | 'bank_transfer' | 'free') | null;
+  paymentMethod?: ('card' | 'paypal' | 'bank_transfer' | 'free' | 'trial') | null;
   /**
    * Montant réellement payé pour cette période
    */
@@ -777,6 +778,7 @@ export interface UsersSelect<T extends boolean = true> {
   accountStatus?: T;
   currentSubscription?: T;
   subscriptionStatus?: T;
+  subscriptionEndDate?: T;
   stripeCustomerId?: T;
   stripeSubscriptionId?: T;
   stripePaymentMethodId?: T;

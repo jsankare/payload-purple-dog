@@ -42,6 +42,7 @@ export async function GET(
         viewCount: currentViews + 1,
       },
       depth: 2,
+      overrideAccess: true, // Skip validation for existing objects
     })
 
     return NextResponse.json(updated, { status: 200 })

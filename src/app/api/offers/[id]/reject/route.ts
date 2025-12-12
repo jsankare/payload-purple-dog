@@ -3,13 +3,11 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 /**
- * PUT /api/offers/[id]/reject
+ * POST /api/offers/[id]/reject
  * 
  * Reject an offer (seller only)
- * 
- * @param params.id - Offer ID
  */
-export async function PUT(
+export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -17,7 +15,7 @@ export async function PUT(
     const payload = await getPayload({ config: configPromise })
     const { id } = await params
 
-    // Get authenticated user using Payload auth
+    // Get authenticated user
     const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
@@ -28,31 +26,31 @@ export async function PUT(
     }
 
     // Fetch offer
-    let offer
-    try {
-      offer = await payload.findByID({
-        collection: 'offers',
-        id,
-      })
-    } catch (error) {
+    const offer = await payload.findByID({
+      collection: 'offers',
+      id,
+      depth: 2,
+    })
+
+    if (!offer) {
       return NextResponse.json(
         { error: 'Offer not found' },
         { status: 404 }
       )
     }
 
-    // Fetch associated object
-    const object = await payload.findByID({
+    // Get object
+    const object = typeof offer.object === 'object' ? offer.object : await payload.findByID({
       collection: 'objects',
-      id: typeof offer.object === 'string' ? offer.object : offer.object.id,
+      id: offer.object as string,
     })
 
-    // Verify user is the seller or admin
+    // Verify user is the seller
     const sellerId = typeof object.seller === 'string' ? object.seller : object.seller?.id
 
     if (user.role !== 'admin' && user.id !== sellerId) {
       return NextResponse.json(
-        { error: 'Only the seller can reject this offer' },
+        { error: 'Only the seller can reject offers' },
         { status: 403 }
       )
     }
@@ -65,16 +63,65 @@ export async function PUT(
       )
     }
 
-    // Update offer status
+    // Mark offer as rejected
     const updatedOffer = await payload.update({
       collection: 'offers',
       id: offer.id,
       data: {
         status: 'rejected',
       },
+      overrideAccess: true,
     })
 
-    return NextResponse.json(updatedOffer, { status: 200 })
+    // Send email notification to buyer
+    try {
+      const buyerId = typeof offer.buyer === 'string' ? offer.buyer : offer.buyer?.id
+
+      const buyer = await payload.findByID({
+        collection: 'users',
+        id: buyerId as string,
+      })
+
+      const { sendEmail } = await import('@/lib/email/templates')
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000'
+
+      const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 8px; padding: 30px; }
+    .header { background: #ef4444; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; margin: -30px -30px 20px -30px; }
+    .button { display: inline-block; padding: 12px 30px; background: #7c3aed; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Offre refusée</h1>
+    </div>
+    <p>Bonjour ${buyer.firstName},</p>
+    <p>Malheureusement, votre offre de <strong>${offer.amount}€</strong> pour <strong>${object.name}</strong> a été refusée par le vendeur.</p>
+    <p>N'hésitez pas à consulter d'autres objets disponibles sur la plateforme.</p>
+    <div style="text-align: center;">
+      <a href="${appUrl}/objets" class="button">Voir les objets disponibles</a>
+    </div>
+  </div>
+</body>
+</html>
+      `.trim()
+
+      await sendEmail(buyer.email, 'Votre offre a été refusée', html)
+    } catch (emailError) {
+      console.error('Error sending offer rejection email:', emailError)
+    }
+
+    return NextResponse.json({
+      message: 'Offer rejected successfully',
+      offer: updatedOffer,
+    }, { status: 200 })
   } catch (error) {
     console.error('Error rejecting offer:', error)
     return NextResponse.json(

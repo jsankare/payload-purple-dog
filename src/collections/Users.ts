@@ -461,6 +461,16 @@ export const Users: CollectionConfig = {
         condition: (data, siblingData, { operation }) => operation === 'update', // Visible uniquement en modification
       },
     },
+    {
+      name: 'subscriptionEndDate',
+      type: 'date',
+      label: "Date de fin d'abonnement",
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        condition: (data) => data.role === 'professionnel',
+      },
+    },
 
     // ========== STRIPE ==========
     {
@@ -626,6 +636,71 @@ export const Users: CollectionConfig = {
               )
             }
           }, 1000) // Attendre 1 seconde pour que la transaction soit commitée
+        }
+
+        // Si c'est un professionnel, créer un abonnement d'essai (30 jours)
+        if (doc.role === 'professionnel') {
+          setTimeout(async () => {
+            try {
+              // Trouver le forfait professionnel
+              const proPlan = await req.payload.find({
+                collection: 'plans',
+                where: {
+                  slug: {
+                    equals: 'professionnel',
+                  },
+                },
+                limit: 1,
+              })
+
+              if (proPlan.docs.length > 0) {
+                const plan = proPlan.docs[0]
+
+                // Créer l'abonnement d'essai (30 jours)
+                const now = new Date()
+                const trialEnd = new Date(now)
+                trialEnd.setDate(trialEnd.getDate() + 30)
+
+                const subscription = await req.payload.create({
+                  collection: 'subscriptions',
+                  data: {
+                    user: doc.id,
+                    plan: plan.id,
+                    status: 'active', // "active" pendant la période d'essai pour simplifier l'accès, ou "trialing"
+                    currentPeriodStart: now.toISOString(),
+                    currentPeriodEnd: trialEnd.toISOString(),
+                    autoRenew: true,
+                    paymentMethod: 'trial',
+                    amount: plan.price || 49,
+                    notes: 'Période d\'essai professionnel (30 jours)',
+                  },
+                  overrideAccess: true,
+                })
+
+                // Mettre à jour l'utilisateur
+                await req.payload.update({
+                  collection: 'users',
+                  id: doc.id,
+                  data: {
+                    currentSubscription: subscription.id,
+                    subscriptionStatus: 'trialing', // Explicite pour le frontend
+                    subscriptionEndDate: trialEnd.toISOString(),
+                    canSell: true, // Autoriser vente pendant l'essai
+                    canBid: true, // Autoriser enchères pendant l'essai
+                  },
+                  overrideAccess: true,
+                })
+
+                req.payload.logger.info(`Période d'essai activée pour le pro ${doc.email}`)
+              } else {
+                req.payload.logger.warn(`Plan 'professionnel' non trouvé pour ${doc.email}`)
+              }
+            } catch (error) {
+              req.payload.logger.error(
+                `Erreur lors de la création de l'abonnement pro : ${error}`,
+              )
+            }
+          }, 1000)
         }
 
         return doc

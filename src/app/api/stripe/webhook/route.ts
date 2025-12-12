@@ -1,243 +1,151 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { headers } from 'next/headers'
+import Stripe from 'stripe'
+import configPromise from '@payload-config'
 import { getPayload } from 'payload'
-import config from '@/payload.config'
-import { stripe } from '@/lib/stripe'
 
-export async function POST(req: NextRequest) {
-  const body = await req.text()
-  const signature = (await headers()).get('stripe-signature')
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: '2024-12-18.acacia',
+})
 
-  if (!signature) {
-    return NextResponse.json({ error: 'No signature' }, { status: 400 })
-  }
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET
 
-  let event
+export async function POST(request: NextRequest) {
+  const body = await request.text()
+  const sig = request.headers.get('stripe-signature')
+
+  let event: Stripe.Event
 
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET || ''
-    )
+    if (!endpointSecret || !sig) {
+      throw new Error('Missing webhook secret or signature')
+    }
+    event = stripe.webhooks.constructEvent(body, sig, endpointSecret)
   } catch (err: any) {
-    console.error('Webhook signature verification failed:', err.message)
-    return NextResponse.json({ error: err.message }, { status: 400 })
+    console.error(`Webhook Error: ${err.message}`)
+    return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 })
   }
 
-  const payload = await getPayload({ config })
+  const payload = await getPayload({ config: configPromise })
 
   try {
     switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object
-        const userId = parseInt(session.metadata?.userId || '0')
-        const planId = parseInt(session.metadata?.planId || '0')
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object as Stripe.Invoice
+        const subscriptionId = invoice.subscription as string
+        const customerId = invoice.customer as string
 
-        if (userId && planId && session.subscription) {
-          // Calculer les dates
-          const now = new Date()
-          const periodEnd = new Date(now)
-          periodEnd.setMonth(periodEnd.getMonth() + 1)
-
-          // Créer ou mettre à jour l'abonnement
-          const subscription = await payload.create({
-            collection: 'subscriptions',
-            data: {
-              user: userId,
-              plan: planId,
-              status: 'active',
-              currentPeriodStart: now.toISOString(),
-              currentPeriodEnd: periodEnd.toISOString(),
-              autoRenew: true,
-              paymentMethod: 'card',
-              amount: session.amount_total ? session.amount_total / 100 : 0,
-              notes: 'Abonnement activé via Stripe',
-            },
-          })
-
-          // Mettre à jour l'utilisateur
-          await payload.update({
-            collection: 'users',
-            id: userId,
-            data: {
-              currentSubscription: subscription.id,
-              subscriptionStatus: 'active',
-              stripeSubscriptionId: session.subscription as string,
-            },
-          })
-
-          console.log(`✅ Abonnement activé pour l'utilisateur ${userId}`)
-        }
-        break
-      }
-
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object
-        const customerId = subscription.customer as string
-
-        // Trouver l'utilisateur par stripeCustomerId
+        // Retrouver l'utilisateur
         const users = await payload.find({
           collection: 'users',
           where: {
-            stripeCustomerId: {
-              equals: customerId,
-            },
+            stripeCustomerId: { equals: customerId },
           },
           limit: 1,
         })
 
         if (users.docs.length > 0) {
           const user = users.docs[0]
-          const status = subscription.status === 'active' ? 'active' :
-            subscription.status === 'trialing' ? 'trialing' :
-              subscription.status === 'canceled' ? 'canceled' : 'suspended'
+
+          // Calculer nouvelle date de fin (+1 mois ou période courante)
+          // Stripe gère la période, on peut récupérer la subscription pour être précis
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+          const currentPeriodEnd = new Date(subscription.current_period_end * 1000)
 
           await payload.update({
             collection: 'users',
             id: user.id,
             data: {
-              subscriptionStatus: status,
+              subscriptionStatus: 'active',
+              subscriptionEndDate: currentPeriodEnd.toISOString(),
+              stripeSubscriptionId: subscriptionId,
+              stripePaymentMethodId: invoice.payment_intent as string || undefined,
+              hasValidPaymentMethod: true,
             },
           })
 
-          console.log(`✅ Statut abonnement mis à jour pour ${user.email}: ${status}`)
+          // Mettre à jour ou créer l'enregistrement dans la collection 'subscriptions' si nécessaire
+          const existingSubs = await payload.find({
+            collection: 'subscriptions',
+            where: {
+              user: { equals: user.id },
+              status: { equals: 'active' }
+            },
+            limit: 1
+          })
+
+          if (existingSubs.docs.length > 0) {
+            const sub = existingSubs.docs[0]
+            await payload.update({
+              collection: 'subscriptions',
+              id: sub.id,
+              data: {
+                currentPeriodEnd: currentPeriodEnd.toISOString(),
+                status: 'active',
+                paymentMethod: 'card', // On suppose carte
+                amount: invoice.amount_paid / 100
+              }
+            })
+          }
         }
         break
       }
 
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object
+        const subscription = event.data.object as Stripe.Subscription
         const customerId = subscription.customer as string
 
-        // Trouver l'utilisateur
         const users = await payload.find({
           collection: 'users',
           where: {
-            stripeCustomerId: {
-              equals: customerId,
-            },
+            stripeCustomerId: { equals: customerId },
           },
           limit: 1,
         })
 
         if (users.docs.length > 0) {
           const user = users.docs[0]
-
-          // Passer en mode restreint
           await payload.update({
             collection: 'users',
             id: user.id,
             data: {
-              subscriptionStatus: 'restricted',
+              subscriptionStatus: 'canceled', // ou expired
             },
           })
-
-          console.log(`⚠️ Abonnement annulé - compte restreint pour ${user.email}`)
         }
         break
       }
 
       case 'invoice.payment_failed': {
-        const invoice = event.data.object
+        const invoice = event.data.object as Stripe.Invoice
         const customerId = invoice.customer as string
 
-        // Trouver l'utilisateur
         const users = await payload.find({
           collection: 'users',
           where: {
-            stripeCustomerId: {
-              equals: customerId,
-            },
+            stripeCustomerId: { equals: customerId },
           },
           limit: 1,
         })
 
         if (users.docs.length > 0) {
           const user = users.docs[0]
-
-          // Suspendre temporairement
+          // On pourrait notifier l'utilisateur ici
           await payload.update({
             collection: 'users',
             id: user.id,
             data: {
-              subscriptionStatus: 'suspended',
+              hasValidPaymentMethod: false,
+              // On ne change pas forcément le statut tout de suite, Stripe réessaie
             },
           })
-
-          console.log(`⚠️ Paiement échoué - compte suspendu pour ${user.email}`)
         }
         break
       }
-
-      case 'payment_intent.succeeded': {
-        const paymentIntent = event.data.object
-        const transactionId = paymentIntent.metadata?.transactionId
-
-        if (transactionId) {
-          try {
-            const transaction = await payload.findByID({
-              collection: 'transactions',
-              id: transactionId,
-            })
-
-            await payload.update({
-              collection: 'transactions',
-              id: transaction.id,
-              data: {
-                paymentStatus: 'held',
-                status: 'payment_held',
-                paymentIntentId: paymentIntent.id,
-                paidAt: new Date().toISOString(),
-              },
-            })
-
-            console.log(`✅ Paiement objet réussi, fonds bloqués pour transaction ${transactionId}`)
-          } catch (error) {
-            console.error(`Erreur lors de la mise à jour de la transaction ${transactionId}:`, error)
-          }
-        }
-        break
-      }
-
-      case 'payment_intent.payment_failed': {
-        const paymentIntent = event.data.object
-        const transactionId = paymentIntent.metadata?.transactionId
-
-        if (transactionId) {
-          try {
-            const transaction = await payload.findByID({
-              collection: 'transactions',
-              id: transactionId,
-            })
-
-            await payload.update({
-              collection: 'transactions',
-              id: transaction.id,
-              data: {
-                status: 'cancelled',
-                paymentStatus: 'pending',
-              },
-            })
-
-            console.log(`⚠️ Paiement objet échoué pour transaction ${transactionId}`)
-          } catch (error) {
-            console.error(`Erreur lors de l'annulation de la transaction ${transactionId}:`, error)
-          }
-        }
-        break
-      }
-
-      default:
-        console.log(`Unhandled event type: ${event.type}`)
     }
 
     return NextResponse.json({ received: true })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error processing webhook:', error)
-    return NextResponse.json(
-      { error: 'Webhook handler failed', details: error.message },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 })
   }
 }

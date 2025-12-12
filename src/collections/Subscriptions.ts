@@ -146,6 +146,10 @@ export const Subscriptions: CollectionConfig = {
           label: 'Gratuit',
           value: 'free',
         },
+        {
+          label: 'Essai',
+          value: 'trial',
+        },
       ],
     },
     {
@@ -173,7 +177,7 @@ export const Subscriptions: CollectionConfig = {
         if (data.status === 'canceled' && !data.canceledAt) {
           data.canceledAt = new Date().toISOString()
         }
-        
+
         return data
       },
     ],
@@ -195,7 +199,7 @@ export const Subscriptions: CollectionConfig = {
             req.payload.logger.error(`Erreur lors de la mise à jour de l'utilisateur: ${error}`)
           }
         }
-        
+
         return doc
       },
     ],
