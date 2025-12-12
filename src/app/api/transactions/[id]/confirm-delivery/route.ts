@@ -13,14 +13,14 @@ import { capturePaymentIntent } from '@/lib/stripe'
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const payload = await getPayload({ config: configPromise })
+    const { id } = await params
 
-    // Get authenticated user
-    // @ts-ignore - Payload injects user in request context
-    const user = request.user
+    // Get authenticated user using Payload auth
+    const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
       return NextResponse.json(
@@ -34,7 +34,7 @@ export async function POST(
     try {
       transaction = await payload.findByID({
         collection: 'transactions',
-        id: params.id,
+        id,
       })
     } catch (error) {
       return NextResponse.json(

@@ -10,14 +10,15 @@ import config from '@/payload.config'
  */
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const payload = await getPayload({ config })
-    
+    const { id } = await params
+
     // Vérifier l'authentification
     const { user } = await payload.auth({ headers: req.headers })
-    
+
     if (!user) {
       return NextResponse.json(
         { error: 'Non authentifié' },
@@ -25,7 +26,7 @@ export async function PUT(
       )
     }
 
-    const feedbackId = parseInt(params.id)
+    const feedbackId = parseInt(id)
     
     if (isNaN(feedbackId)) {
       return NextResponse.json(
@@ -118,14 +119,15 @@ export async function PUT(
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const payload = await getPayload({ config })
-    
+    const { id } = await params
+
     // Vérifier l'authentification
     const { user } = await payload.auth({ headers: req.headers })
-    
+
     if (!user) {
       return NextResponse.json(
         { error: 'Non authentifié' },
@@ -133,7 +135,7 @@ export async function DELETE(
       )
     }
 
-    const feedbackId = parseInt(params.id)
+    const feedbackId = parseInt(id)
     
     if (isNaN(feedbackId)) {
       return NextResponse.json(

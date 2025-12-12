@@ -12,8 +12,7 @@ export async function GET(request: NextRequest) {
     const payload = await getPayload({ config: configPromise })
 
     // Get authenticated user
-    // @ts-ignore - Payload injects user in request context
-    const user = request.user
+    const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
       return NextResponse.json(

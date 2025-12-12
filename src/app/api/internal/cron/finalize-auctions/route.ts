@@ -160,9 +160,67 @@ export async function POST(request: NextRequest) {
               },
             })
 
-            // TODO: Send email notifications
-            // - Email to winner (auctionWonTemplate)
-            // - Email to other bidders (auctionLostTemplate)
+            // Send email notifications
+            try {
+              const { auctionWonTemplate, auctionLostTemplate, sendEmail } = await import('@/lib/email/templates')
+              const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000'
+
+              // Get winner details
+              const winner = await payload.findByID({
+                collection: 'users',
+                id: buyerId as string,
+              })
+
+              // Email to winner
+              const winnerHtml = auctionWonTemplate({
+                objectName: object.name,
+                objectUrl: `${appUrl}/objets/${object.id}`,
+                finalPrice: winningBid.amount,
+                userName: winner.firstName,
+                checkoutUrl: `${appUrl}/checkout/${transaction.id}`,
+              })
+              await sendEmail(winner.email, 'Félicitations ! Vous avez remporté l\'enchère', winnerHtml)
+
+              // Email to other bidders (losers)
+              const allBids = await payload.find({
+                collection: 'bids',
+                where: {
+                  object: { equals: object.id },
+                  id: { not_equals: winningBid.id },
+                },
+              })
+
+              const loserEmails = new Set<string>()
+              for (const bid of allBids.docs) {
+                const bidderId = typeof bid.bidder === 'string' ? bid.bidder : bid.bidder?.id
+                if (bidderId && bidderId !== buyerId) {
+                  const bidder = await payload.findByID({
+                    collection: 'users',
+                    id: bidderId as string,
+                  })
+                  loserEmails.add(bidder.email)
+                }
+              }
+
+              for (const email of loserEmails) {
+                const bidder = await payload.find({
+                  collection: 'users',
+                  where: { email: { equals: email } },
+                  limit: 1,
+                })
+                if (bidder.docs[0]) {
+                  const loserHtml = auctionLostTemplate({
+                    objectName: object.name,
+                    objectUrl: `${appUrl}/objets`,
+                    userName: bidder.docs[0].firstName,
+                  })
+                  await sendEmail(email, 'Enchère terminée', loserHtml)
+                }
+              }
+            } catch (emailError) {
+              console.error('Error sending auction emails:', emailError)
+              // Don't fail the cron if email fails
+            }
           }
         }
 

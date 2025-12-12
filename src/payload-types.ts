@@ -201,6 +201,14 @@ export interface User {
   stripeCustomerId?: string | null;
   stripeSubscriptionId?: string | null;
   /**
+   * ID du moyen de paiement Stripe (carte bancaire)
+   */
+  stripePaymentMethodId?: string | null;
+  /**
+   * Requis pour enchérir (professionnels uniquement)
+   */
+  hasValidPaymentMethod?: boolean | null;
+  /**
    * Computed automatically (pro + active subscription + valid bank details).
    */
   canBid?: boolean | null;
@@ -564,17 +572,17 @@ export interface Transaction {
     | 'completed'
     | 'cancelled'
     | 'disputed';
-  shippingAddress: {
-    street: string;
-    city: string;
-    postalCode: string;
-    country: string;
+  shippingAddress?: {
+    street?: string | null;
+    city?: string | null;
+    postalCode?: string | null;
+    country?: string | null;
   };
-  billingAddress: {
-    street: string;
-    city: string;
-    postalCode: string;
-    country: string;
+  billingAddress?: {
+    street?: string | null;
+    city?: string | null;
+    postalCode?: string | null;
+    country?: string | null;
   };
   /**
    * Name of the shipping carrier
@@ -771,6 +779,8 @@ export interface UsersSelect<T extends boolean = true> {
   subscriptionStatus?: T;
   stripeCustomerId?: T;
   stripeSubscriptionId?: T;
+  stripePaymentMethodId?: T;
+  hasValidPaymentMethod?: T;
   canBid?: T;
   canSell?: T;
   updatedAt?: T;

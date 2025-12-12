@@ -116,10 +116,11 @@ export async function createObjectCheckoutSession(
     objectId: string
     sellerId: string
     buyerId: string
-  }
+  },
+  paymentMethodId?: string // Optional: use saved payment method
 ) {
   try {
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: any = {
       customer: customerId,
       payment_method_types: ['card'],
       mode: 'payment', // Mode paiement unique (pas abonnement)
@@ -139,12 +140,27 @@ export async function createObjectCheckoutSession(
         capture_method: 'manual', // IMPORTANT: Capture manuelle
         metadata,
       },
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/payment/cancel`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/checkout/cancel`,
       metadata: {
         transactionId,
       },
-    })
+    }
+
+    // If user has a saved payment method, use it
+    if (paymentMethodId) {
+      sessionParams.payment_method_options = {
+        card: {
+          setup_future_usage: 'off_session',
+        },
+      }
+      // Pre-fill the payment method in checkout
+      sessionParams.customer_update = {
+        shipping: 'auto',
+      }
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams)
     return session
   } catch (error) {
     console.error('Erreur création session checkout objet:', error)

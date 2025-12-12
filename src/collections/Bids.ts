@@ -189,8 +189,10 @@ export const Bids: CollectionConfig = {
     beforeValidate: [
       async ({ data, req, operation }) => {
         if (operation === 'create' && data) {
-          // Auto-définir le bidder sur l'utilisateur actuel
-          data.bidder = req.user?.id
+          // Auto-définir le bidder sur l'utilisateur actuel si pas déjà défini
+          if (!data.bidder && req.user?.id) {
+            data.bidder = req.user.id
+          }
         }
         return data
       },

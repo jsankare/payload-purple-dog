@@ -36,6 +36,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 🚨 CRITICAL: Verify user has valid payment method before bidding
+    if (!user.hasValidPaymentMethod) {
+      return NextResponse.json(
+        {
+          error: 'You must add a payment method before bidding',
+          code: 'PAYMENT_METHOD_REQUIRED',
+          redirectTo: '/dashboard/profile/payment-methods'
+        },
+        { status: 403 }
+      )
+    }
+
     // Parse request body
     const body = await request.json()
     const { objectId, amount, isAutoBid = false, maxAutoBidAmount } = body
@@ -122,6 +134,7 @@ export async function POST(request: NextRequest) {
         source: isAutoBid ? 'auto' : 'manual',
         maxAutoBidAmount: isAutoBid ? maxAutoBidAmount : undefined,
       },
+      overrideAccess: true, // Bypass access control (already verified user is professionnel above)
     })
 
     // Check if auction should be extended
@@ -141,23 +154,66 @@ export async function POST(request: NextRequest) {
           ? (object.auctionExtensions || 0) + 1
           : object.auctionExtensions,
       },
+      overrideAccess: true, // Bypass access control
     })
 
-    // TODO: Send email notification to previous bidder (if exists)
-    // if (object.currentBidder && object.currentBidder !== user.id) {
-    //   const previousBidder = await payload.findByID({
-    //     collection: 'users',
-    //     id: object.currentBidder,
-    //   })
-    //   const html = auctionOutbidTemplate({
-    //     objectName: object.name,
-    //     objectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/objects/${object.id}`,
-    //     yourBid: currentBid,
-    //     newBid: amount,
-    //     userName: previousBidder.firstName,
-    //   })
-    //   await sendEmail(previousBidder.email, 'Vous avez été surenchéri', html)
-    // }
+    // Send email notification to previous bidder (if exists)
+    if (object.currentBidder && object.currentBidder !== user.id) {
+      try {
+        const { auctionOutbidTemplate, sendEmail } = await import('@/lib/email/templates')
+
+        // Extract previous bidder ID (can be string or object)
+        const previousBidderId = typeof object.currentBidder === 'string'
+          ? object.currentBidder
+          : object.currentBidder?.id
+
+        if (previousBidderId && previousBidderId !== user.id) {
+          const previousBidder = await payload.findByID({
+            collection: 'users',
+            id: previousBidderId as string,
+          })
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000'
+          const html = auctionOutbidTemplate({
+            objectName: object.name,
+            objectUrl: `${appUrl}/objets/${object.id}`,
+            yourBid: currentBid,
+            newBid: amount,
+            userName: previousBidder.firstName,
+          })
+          await sendEmail(previousBidder.email, 'Vous avez été surenchéri', html)
+        }
+      } catch (emailError) {
+        console.error('Error sending outbid email:', emailError)
+        // Don't fail the bid if email fails
+      }
+    }
+
+    // Send email notification to seller about new bid
+    try {
+      const { newBidTemplate, sendEmail } = await import('@/lib/email/templates')
+
+      const sellerId = typeof object.seller === 'string' ? object.seller : object.seller?.id
+
+      if (sellerId) {
+        const seller = await payload.findByID({
+          collection: 'users',
+          id: sellerId as string,
+        })
+
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000'
+        const html = newBidTemplate({
+          objectName: object.name,
+          objectUrl: `${appUrl}/objets/${object.id}`,
+          bidAmount: amount,
+          bidderName: user.firstName, // Only first name for privacy
+          sellerName: seller.firstName,
+        })
+        await sendEmail(seller.email, 'Nouvelle enchère sur votre objet !', html)
+      }
+    } catch (emailError) {
+      console.error('Error sending seller notification email:', emailError)
+      // Don't fail the bid if email fails
+    }
 
     return NextResponse.json(
       {

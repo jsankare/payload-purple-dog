@@ -11,14 +11,14 @@ import { getPayload } from 'payload'
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const payload = await getPayload({ config: configPromise })
+    const { id } = await params
 
-    // Get authenticated user
-    // @ts-ignore - Payload injects user in request context
-    const user = request.user
+    // Get authenticated user using Payload auth
+    const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
       return NextResponse.json(
@@ -32,7 +32,7 @@ export async function PUT(
     try {
       offer = await payload.findByID({
         collection: 'offers',
-        id: params.id,
+        id,
       })
     } catch (error) {
       return NextResponse.json(

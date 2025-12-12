@@ -17,9 +17,8 @@ export async function POST(request: NextRequest) {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Get authenticated user
-    // @ts-ignore - Payload injects user in request context
-    const user = request.user
+    // Get authenticated user using Payload auth
+    const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
       return NextResponse.json(
@@ -36,7 +35,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (user.subscriptionStatus !== 'active') {
+    if (user.subscriptionStatus !== 'active' && user.subscriptionStatus !== 'trialing') {
       return NextResponse.json(
         { error: 'Active subscription required to make offers' },
         { status: 403 }
@@ -118,7 +117,7 @@ export async function POST(request: NextRequest) {
 
         const html = newOfferTemplate({
           objectName: object.name,
-          objectUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/objects/${object.id}`,
+          objectUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000'}/objects/${object.id}`,
           offerAmount: amount,
           buyerName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
           sellerName: `${seller.firstName || ''} ${seller.lastName || ''}`.trim() || seller.email,

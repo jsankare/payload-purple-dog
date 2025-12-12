@@ -483,6 +483,28 @@ export const Users: CollectionConfig = {
         condition: (data, siblingData, { operation }) => operation === 'update', // Visible uniquement en modification
       },
     },
+    {
+      name: 'stripePaymentMethodId',
+      type: 'text',
+      label: 'Stripe Payment Method ID',
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        condition: (data, siblingData, { operation }) => operation === 'update',
+        description: 'ID du moyen de paiement Stripe (carte bancaire)',
+      },
+    },
+    {
+      name: 'hasValidPaymentMethod',
+      type: 'checkbox',
+      defaultValue: false,
+      label: 'Moyen de paiement validé',
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        description: 'Requis pour enchérir (professionnels uniquement)',
+      },
+    },
 
     // ========== PERMISSIONS CALCULÉES ==========
     // Permissions calculées (peut enchérir / peut vendre)

@@ -12,14 +12,14 @@ import { getPayload } from 'payload'
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const payload = await getPayload({ config: configPromise })
+    const { id } = await params
 
-    // Get authenticated user
-    // @ts-ignore - Payload injects user in request context
-    const user = request.user
+    // Get authenticated user using Payload auth
+    const { user } = await payload.auth({ headers: request.headers })
 
     if (!user) {
       return NextResponse.json(
@@ -33,7 +33,7 @@ export async function PUT(
     try {
       offer = await payload.findByID({
         collection: 'offers',
-        id: params.id,
+        id,
       })
     } catch (error) {
       return NextResponse.json(
@@ -124,7 +124,51 @@ export async function PUT(
         paymentStatus: 'pending',
         status: 'payment_pending',
       },
+      overrideAccess: true, // Bypass admin-only access control
     })
+
+    // Reject all other pending offers for this object
+    const otherOffers = await payload.find({
+      collection: 'offers',
+      where: {
+        object: { equals: object.id },
+        id: { not_equals: offer.id },
+        status: { equals: 'pending' },
+      },
+    })
+
+    for (const otherOffer of otherOffers.docs) {
+      await payload.update({
+        collection: 'offers',
+        id: otherOffer.id,
+        data: {
+          status: 'rejected',
+        },
+        overrideAccess: true,
+      })
+    }
+
+    // Send email notification to buyer
+    try {
+      const { purchaseConfirmationTemplate, sendEmail } = await import('@/lib/email/templates')
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000'
+
+      const buyer = await payload.findByID({
+        collection: 'users',
+        id: buyerId as string,
+      })
+
+      const buyerHtml = purchaseConfirmationTemplate({
+        objectName: object.name,
+        objectUrl: `${appUrl}/objets/${object.id}`,
+        totalAmount,
+        buyerName: `${buyer.firstName} ${buyer.lastName}`,
+        checkoutUrl: `${appUrl}/checkout/${transaction.id}`,
+      })
+      await sendEmail(buyer.email, 'Votre offre a été acceptée !', buyerHtml)
+    } catch (emailError) {
+      console.error('Error sending offer acceptance email:', emailError)
+    }
 
     return NextResponse.json(
       {

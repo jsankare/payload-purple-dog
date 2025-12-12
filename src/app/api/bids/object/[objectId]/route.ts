@@ -11,11 +11,11 @@ import { getPayload } from 'payload'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { objectId: string } }
+  { params }: { params: Promise<{ objectId: string }> }
 ) {
   try {
     const payload = await getPayload({ config: configPromise })
-    const { objectId } = params
+    const { objectId } = await params
 
     // Fetch bids for this object
     const result = await payload.find({

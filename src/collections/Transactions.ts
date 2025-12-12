@@ -18,9 +18,12 @@ export const Transactions: CollectionConfig = {
   },
   defaultSort: '-createdAt',
   access: {
-    // Création: admin uniquement (système)
+    // Création: admin ou système (via overrideAccess)
     create: ({ req: { user } }) => {
-      return user?.role === 'admin'
+      // Admin peut créer manuellement
+      if (user?.role === 'admin') return true
+      // Système peut créer via overrideAccess
+      return false
     },
 
     // Lecture: admin voit tout, sinon seulement ses transactions (acheteur ou vendeur)
@@ -311,7 +314,6 @@ export const Transactions: CollectionConfig = {
         {
           name: 'street',
           type: 'text',
-          required: true,
           label: {
             en: 'Street',
             fr: 'Rue',
@@ -320,7 +322,6 @@ export const Transactions: CollectionConfig = {
         {
           name: 'city',
           type: 'text',
-          required: true,
           label: {
             en: 'City',
             fr: 'Ville',
@@ -329,7 +330,6 @@ export const Transactions: CollectionConfig = {
         {
           name: 'postalCode',
           type: 'text',
-          required: true,
           label: {
             en: 'Postal code',
             fr: 'Code postal',
@@ -338,7 +338,6 @@ export const Transactions: CollectionConfig = {
         {
           name: 'country',
           type: 'text',
-          required: true,
           defaultValue: 'France',
           label: {
             en: 'Country',
@@ -358,7 +357,6 @@ export const Transactions: CollectionConfig = {
         {
           name: 'street',
           type: 'text',
-          required: true,
           label: {
             en: 'Street',
             fr: 'Rue',
@@ -367,7 +365,6 @@ export const Transactions: CollectionConfig = {
         {
           name: 'city',
           type: 'text',
-          required: true,
           label: {
             en: 'City',
             fr: 'Ville',
@@ -376,7 +373,6 @@ export const Transactions: CollectionConfig = {
         {
           name: 'postalCode',
           type: 'text',
-          required: true,
           label: {
             en: 'Postal code',
             fr: 'Code postal',
@@ -385,7 +381,6 @@ export const Transactions: CollectionConfig = {
         {
           name: 'country',
           type: 'text',
-          required: true,
           defaultValue: 'France',
           label: {
             en: 'Country',

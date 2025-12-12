@@ -119,7 +119,7 @@ export const Objects: CollectionConfig = {
       name: 'photos',
       type: 'array',
       label: { en: 'Photos', fr: 'Photos' },
-      minRows: 1,
+      minRows: 10,
       required: true,
       labels: {
         singular: { en: 'Photo', fr: 'Photo' },
